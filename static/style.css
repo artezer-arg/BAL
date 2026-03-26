@@ -136,3 +136,34 @@ input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:foc
 .status-ok { color: var(--success); display: inline-flex; align-items: center; gap: 0.5rem; }
 .status-ok::before { content: ''; display: block; width: 8px; height: 8px; background: var(--success); border-radius: 50%; }
 .empty-row td { text-align: center; color: var(--text-secondary); font-style: italic; padding: 3rem !important; }
+
+/* EDITOR DE ETIQUETAS */
+.draggable-field {
+    position: absolute;
+    cursor: grab;
+    user-select: none;
+    border: 1px dashed transparent;
+    padding: 2px;
+    white-space: nowrap;
+    transform: translate(-50%, -50%); /* Centrado en su coordenada X Y verdadera */
+    font-family: 'Arial', sans-serif;
+    color: black;
+}
+.draggable-field:hover {
+    border: 1px dashed var(--accent);
+}
+.draggable-field.active-field {
+    border: 2px dashed var(--accent);
+    background: rgba(33, 150, 243, 0.1);
+    z-index: 10;
+}
+.draggable-field:active {
+    cursor: grabbing;
+}
+.qr-box {
+    font-size: 8px;
+    font-weight: bold;
+}
+#print-canvas {
+    transition: width 0.3s, height 0.3s;
+}

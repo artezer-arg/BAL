@@ -6,18 +6,201 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Navegación Sidebar
+let despachoInterval = null;
+
 function switchView(viewName, e) {
     if (e) e.preventDefault();
     document.querySelectorAll('.menu a').forEach(a => a.classList.remove('active'));
-    document.getElementById(`nav-${viewName}`).classList.add('active');
+    const nav = document.getElementById(`nav-${viewName}`);
+    if(nav) nav.classList.add('active');
 
-    document.getElementById('dashboard-view').classList.add('hidden');
-    document.getElementById('config-view').classList.add('hidden');
-    document.getElementById('catalog-view').classList.add('hidden');
-    document.getElementById('mapping-view').classList.add('hidden');
-    document.getElementById('readers-view').classList.add('hidden');
+    document.querySelectorAll('main.dashboard').forEach(m => m.classList.add('hidden'));
 
-    document.getElementById(`${viewName}-view`).classList.remove('hidden');
+    const view = document.getElementById(`${viewName}-view`);
+    if(view) view.classList.remove('hidden');
+    
+    if (viewName === 'despacho') {
+        renderTrucks();
+        if (!despachoInterval) despachoInterval = setInterval(renderTrucks, 3000);
+    } else {
+        if (despachoInterval) { clearInterval(despachoInterval); despachoInterval = null; }
+    }
+    
+    if (viewName === 'historial') {
+        renderHistorial();
+    }
+    
+    if (viewName === 'buffer') {
+        renderBuffer();
+        if (!window.bufInterval) window.bufInterval = setInterval(renderBuffer, 3000);
+    } else {
+        if (window.bufInterval) { clearInterval(window.bufInterval); window.bufInterval = null; }
+    }
+}
+
+async function renderTrucks() {
+    try {
+        const res = await fetch('/api/despacho');
+        const data = await res.json();
+        if(data.status === 'success') {
+            const container = document.getElementById('truck-container');
+            container.innerHTML = '';
+            data.trucks.forEach(t => {
+                const seatP = Math.min((t.seat_done / t.capacidad) * 100, 100);
+                const doorP = Math.min((t.door_done / t.capacidad) * 100, 100);
+                const fullBorder = t.lleno ? '#4CAF50' : 'var(--accent)';
+                const statusIcon = t.lleno ? '<span style="color:#4CAF50; font-size:0.75rem; font-weight:800; position:absolute; top:1rem; right:1.5rem; padding: 4px 8px; background: rgba(76, 175, 80, 0.1); border-radius: 4px;">LISTO PARA SALIR ✔</span>' : '';
+                
+                container.innerHTML += `
+                <section class="glass-card" style="border-left: 5px solid ${fullBorder}; position:relative;">
+                    ${statusIcon}
+                    <h3 style="margin-bottom:0.25rem;">Camión Semirremolque #${t.id}</h3>
+                    <p style="opacity:0.7; font-family:var(--font-mono); font-size:0.85rem;">Lote de Producción: [ ${t.rango} ]</p>
+                    
+                    <div style="margin-top: 1.5rem;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:0.35rem; font-size:0.9rem;">
+                            <strong>SEAT SETS (Completos)</strong> <span style="font-family:var(--font-mono);">${t.seat_done} / ${t.capacidad}</span>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.05); height:12px; border-radius:6px; overflow:hidden; margin-bottom: 1.5rem; border: 1px solid rgba(255,255,255,0.1);">
+                            <div style="background: ${t.seat_done >= t.capacidad ? '#4CAF50' : 'var(--accent)'}; width:${seatP}%; height:100%; transition: width 0.5s ease-out;"></div>
+                        </div>
+                        
+                        <div style="display:flex; justify-content:space-between; margin-bottom:0.35rem; font-size:0.9rem;">
+                            <strong>DOOR SETS (Completos)</strong> <span style="font-family:var(--font-mono);">${t.door_done} / ${t.capacidad}</span>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.05); height:12px; border-radius:6px; overflow:hidden; border: 1px solid rgba(255,255,255,0.1);">
+                            <div style="background: ${t.door_done >= t.capacidad ? '#4CAF50' : 'var(--accent)'}; width:${doorP}%; height:100%; transition: width 0.5s ease-out;"></div>
+                        </div>
+                    </div>
+                </section>
+                `;
+            });
+        }
+    } catch(e) { console.error(e); }
+}
+
+// ==========================
+// Historial de Secuencias
+// ==========================
+async function renderHistorial() {
+    try {
+        const trgLector = document.getElementById('flt-lector').value;
+        const res = await fetch('/api/secuencias');
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+            const tbody = document.getElementById('historial-body');
+            tbody.innerHTML = '';
+            
+            let filtered = data.data;
+            if (trgLector !== 'ALL') {
+                filtered = filtered.filter(row => row.lector === trgLector);
+            }
+            
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 2rem; opacity: 0.6;">No se encontraron secuencias físicas</td></tr>`;
+                return;
+            }
+            
+            filtered.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><span class="status-ok" style="background:rgba(255,255,255,0.05); color:white; border:none; border-radius:4px; padding:2px 6px;">${row.fecha}</span></td>
+                    <td><strong>${row.lector}</strong></td>
+                    <td style="font-family:var(--font-mono); font-size:1.1rem; color:var(--accent); font-weight:bold;">${row.secuencia}</td>
+                    <td style="font-family:var(--font-mono);">${row.chasis}</td>
+                    <td style="color:#2196F3; font-weight:bold;">${row.padre}</td>
+                    <td style="font-size:0.8rem; opacity:0.8;">${row.archivo}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+// ==========================
+// Buffer Operations
+// ==========================
+async function renderBuffer() {
+    try {
+        const selCam = document.getElementById('buf-sel-camion');
+        const currentVal = selCam ? selCam.value : '';
+        
+        const res = await fetch('/api/buffer' + (currentVal ? '?camion_id=' + currentVal : ''));
+        const data = await res.json();
+        if (data.status !== 'success') return;
+        
+        const bPend = document.getElementById('buf-pendientes-body');
+        bPend.innerHTML = '';
+        data.pendientes.forEach(p => {
+            bPend.innerHTML += `<tr>
+                <td>${p.linea}</td>
+                <td style="font-weight:bold; color:var(--accent);">${p.seq}</td>
+                <td><strong style="color:#2196F3">${p.hijo}</strong></td>
+                <td><button class="btn btn-primary" style="padding:3px 8px; font-size:0.8rem;" onclick="escanearIngreso(${p.id})">Entrar ↑</button></td>
+            </tr>`;
+        });
+        
+        if (selCam && (selCam.innerHTML === '' || selCam.options.length !== data.camiones.length)) {
+            selCam.innerHTML = data.camiones.map(c => `<option value="${c.id}">Camión #${c.id} (Sec ${c.rango})</option>`).join('');
+            if (currentVal && data.camiones.some(c => c.id == currentVal)) {
+                selCam.value = currentVal;
+            } else if (data.camiones.length > 0 && !currentVal) {
+                selCam.value = data.camiones[0].id;
+                renderBuffer(); return;
+            }
+        }
+        
+        const bReal = document.getElementById('buf-real-body');
+        bReal.innerHTML = '';
+        data.buffer.forEach(b => {
+            bReal.innerHTML += `<tr>
+                <td style="color:#2196F3;">${b.fecha}</td>
+                <td style="opacity:0.8; font-family:var(--font-mono);">${b.seq}</td>
+                <td><strong style="color:#2196F3">${b.padre}</strong></td>
+                <td><button class="btn btn-secondary" style="padding:3px 8px; font-size:0.8rem; border-color:#2196F3; color:#2196F3;" onclick="escanearDespacho(${b.id_inv})">Al Camión →</button></td>
+            </tr>`;
+        });
+
+        const bManifest = document.getElementById('buf-manifest-body');
+        if (bManifest) {
+            bManifest.innerHTML = '';
+            if (data.manifest && data.manifest.length > 0) {
+                data.manifest.forEach(m => {
+                    let st = m.estado === 'Despachado' ? '<span style="color:#4CAF50">✅ Completo</span>' : '<span style="color:var(--accent)">⏳ Esperando</span>';
+                    bManifest.innerHTML += `<tr>
+                        <td style="font-family:var(--font-mono);">[H] ${m.seq_h}</td>
+                        <td><strong style="color:#4CAF50">${m.modelo}</strong></td>
+                        <td>${st}</td>
+                    </tr>`;
+                });
+            } else {
+                bManifest.innerHTML = '<tr><td colspan="3" style="opacity:0.5; text-align:center;">Seleccione un camión con pedidos H</td></tr>';
+            }
+        }
+    } catch(e) { console.error(e); }
+}
+
+async function escanearIngreso(id_ord) {
+    await fetch('/api/buffer/in', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({id: id_ord})
+    });
+    renderBuffer();
+}
+
+async function escanearDespacho(id_inv) {
+    const id_cam = document.getElementById('buf-sel-camion').value;
+    if (!id_cam) { alert("Debe haber un camión activo seleccionado para asignar la pieza."); return; }
+    await fetch('/api/buffer/out', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({id_inv: id_inv, id_camion: parseInt(id_cam)})
+    });
+    renderBuffer();
 }
 
 // ==========================
@@ -132,6 +315,19 @@ async function cargarConfiguracion() {
         if(data.db_name) document.getElementById('cfg-dbname').value = data.db_name;
         if(data.db_user !== undefined) document.getElementById('cfg-user').value = data.db_user;
         if(data.db_pass !== undefined) document.getElementById('cfg-pass').value = data.db_pass;
+        if(data.print_mode !== undefined) document.getElementById('cfg-print-mode').value = data.print_mode;
+        if(data.ip_l1 !== undefined) document.getElementById('cfg-ip-l1').value = data.ip_l1;
+        if(data.ip_l2 !== undefined) document.getElementById('cfg-ip-l2').value = data.ip_l2;
+        if(data.db_user !== undefined) document.getElementById('cfg-user').value = data.db_user;
+        if(data.db_pass !== undefined) document.getElementById('cfg-pass').value = data.db_pass;
+        if(data.camion_inicio !== undefined) {
+            document.getElementById('cfg-camion-i').value = data.camion_inicio;
+            document.getElementById('dsp-cfg-inicio').value = data.camion_inicio;
+        }
+        if(data.camion_capacidad !== undefined) {
+            document.getElementById('cfg-camion-c').value = data.camion_capacidad;
+            document.getElementById('dsp-cfg-cap').value = data.camion_capacidad;
+        }
 
     } catch (e) {
         console.error("Error conectando con el backend BAL", e);
@@ -145,13 +341,23 @@ async function guardarConfigGeneral() {
     const dbname = document.getElementById('cfg-dbname').value;
     const user = document.getElementById('cfg-user').value;
     const pass = document.getElementById('cfg-pass').value;
+    const camIni = document.getElementById('cfg-camion-i').value;
+    const camCap = document.getElementById('cfg-camion-c').value;
+    const pMode = document.getElementById('cfg-print-mode').value;
+    const ipL1 = document.getElementById('cfg-ip-l1').value;
+    const ipL2 = document.getElementById('cfg-ip-l2').value;
 
     try {
         boton.textContent = "Guardando...";
         const respuesta = await fetch('/api/config', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ sftp_folder: folder, db_server: server, db_name: dbname, db_user: user, db_pass: pass })
+            body: JSON.stringify({ 
+                sftp_folder: folder, db_server: server, db_name: dbname, 
+                db_user: user, db_pass: pass, 
+                camion_inicio: parseInt(camIni) || 1, camion_capacidad: parseInt(camCap) || 24,
+                print_mode: pMode, ip_l1: ipL1, ip_l2: ipL2
+            })
         });
         
         const data = await respuesta.json();
@@ -162,6 +368,30 @@ async function guardarConfigGeneral() {
         }
     } catch (e) {
         alert("Error al guardar la configuración general.");
+    }
+}
+
+async function actualizarConfigDespacho() {
+    const boton = document.getElementById('btn-save-dsp');
+    const ini = document.getElementById('dsp-cfg-inicio').value;
+    const cap = document.getElementById('dsp-cfg-cap').value;
+    
+    boton.textContent = "Aplicando...";
+    boton.style.opacity = "0.7";
+    try {
+        await fetch('/api/config', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ camion_inicio: parseInt(ini) || 1, camion_capacidad: parseInt(cap) || 24 })
+        });
+        document.getElementById('cfg-camion-i').value = ini;
+        document.getElementById('cfg-camion-c').value = cap;
+        renderTrucks();
+    } catch (e) {
+        console.error(e);
+    } finally {
+        boton.textContent = "Aplicar Lote";
+        boton.style.opacity = "1";
     }
 }
 
@@ -435,4 +665,329 @@ async function escanearDirectorio() {
             boton.style.opacity = "1";
         }
     }
+}
+
+// ==========================
+// EDITOR VISUAL DE ETIQUETAS
+// ==========================
+let activeField = null;
+let tplData = {};
+
+document.addEventListener('DOMContentLoaded', () => {
+    cargarTemplateBase();
+    initLabelCanvas();
+});
+
+async function cargarTemplateBase() {
+    try {
+        const res = await fetch('/api/templates');
+        if (res.ok) {
+            const data = await res.json();
+            if(Object.keys(data).length > 0) tplData = data;
+            aplicarTemplateActual();
+        }
+    } catch(e) { console.error(e); }
+}
+
+function aplicarTemplateActual() {
+    const lector = document.getElementById('editor-lector').value;
+    const paper = document.getElementById('editor-paper');
+    const cv = document.getElementById('print-canvas');
+    if(!cv) return;
+    
+    if (!tplData[lector]) {
+        tplData[lector] = {
+            format: "10x6",
+            elements: {
+                secuencia: { type: "field", x: 50, y: 20, size: 2.5 },
+                linea: { type: "field", x: 20, y: 35, size: 1.0 },
+                modelo: { type: "field", x: 20, y: 50, size: 1.5 },
+                desc: { type: "field", x: 20, y: 70, size: 0.8 },
+                fecha: { type: "field", x: 20, y: 80, size: 0.6 },
+                qr: { type: "qr", x: 80, y: 50, size: 1.0 }
+            }
+        };
+    }
+    
+    // Add type if missing from old saved config
+    for(const k in tplData[lector].elements) {
+        if(!tplData[lector].elements[k].type) {
+            tplData[lector].elements[k].type = (k === 'qr') ? 'qr' : 'field';
+        }
+    }
+    
+    paper.value = tplData[lector].format;
+    cambiarPapel();
+    cv.innerHTML = '';
+    
+    const els = tplData[lector].elements;
+    for (const key in els) {
+        renderNodoEnCanvas(key, els[key]);
+    }
+    seleccionarCampo(null);
+}
+
+function cambiarPapel() {
+    const val = document.getElementById('editor-paper').value;
+    const cv = document.getElementById('print-canvas');
+    if(!cv) return;
+    if (val === '10x6') { cv.style.width = '100mm'; cv.style.height = '60mm'; }
+    if (val === '10x10') { cv.style.width = '100mm'; cv.style.height = '100mm'; }
+    if (val === 'A5') { cv.style.width = '148mm'; cv.style.height = '210mm'; }
+    
+    const lector = document.getElementById('editor-lector').value;
+    if (tplData[lector]) tplData[lector].format = val;
+}
+
+function renderNodoEnCanvas(id, data) {
+    const cv = document.getElementById('print-canvas');
+    let el = document.getElementById('tpl-' + id);
+    if(!el) {
+        el = document.createElement('div');
+        el.className = 'draggable-field';
+        el.id = 'tpl-' + id;
+        el.dataset.id = id;
+        cv.appendChild(el);
+    }
+    
+    el.style.left = data.x + '%';
+    el.style.top = data.y + '%';
+    el.dataset.scale = data.size || 1;
+    el.dataset.type = data.type;
+    
+    if(data.type === 'field' || data.type === 'static') {
+        el.style.transform = `translate(-50%, -50%) scale(${data.size})`;
+        el.style.width = 'auto'; el.style.height = 'auto'; el.style.background = 'transparent';
+        
+        let shouldBold = data.bold;
+        if(shouldBold === undefined) {
+            shouldBold = (id === 'secuencia' || id === 'modelo'); // Defaults
+        }
+        el.style.fontWeight = shouldBold ? 'bold' : 'normal';
+
+        if(data.type === 'field') {
+            if(id === 'secuencia') el.textContent = 'SEQ: 125';
+            else if(id === 'linea') el.textContent = 'Línea SEAT';
+            else if(id === 'modelo') el.textContent = 'LD23';
+            else if(id === 'desc') el.textContent = 'Asiento Delantero RH';
+            else if(id === 'fecha') el.textContent = '2026-03-26';
+        } else {
+            el.textContent = data.text || 'Texto Fijo';
+        }
+    } else if(data.type === 'qr') {
+        el.style.transform = `translate(-50%, -50%) scale(${data.size})`;
+        el.innerHTML = '<div style="width:100%; height:100%; border:2px solid black; display:flex; align-items:center; justify-content:center; flex-direction:column; font-size:8px; font-weight:bold;"><span>QR</span><span>ID</span></div>';
+        el.style.width = '20mm'; el.style.height = '20mm'; el.style.background = 'transparent';
+    } else if(data.type === 'hline') {
+        el.dataset.length = data.length || 50;
+        el.style.width = el.dataset.length + '%';
+        el.style.height = (data.size * 2) + 'px';
+        el.style.background = 'black';
+        el.style.transform = `translate(-50%, -50%)`;
+        el.textContent = '';
+    } else if(data.type === 'vline') {
+        el.dataset.length = data.length || 50;
+        el.style.height = el.dataset.length + '%';
+        el.style.width = (data.size * 2) + 'px';
+        el.style.background = 'black';
+        el.style.transform = `translate(-50%, -50%)`;
+        el.textContent = '';
+    }
+}
+
+function crearElemento(type) {
+    const lector = document.getElementById('editor-lector').value;
+    if(!tplData[lector]) return;
+    
+    const id = type + '_' + Date.now();
+    const data = { type: type, x: 50, y: 50, size: 1.0 };
+    if(type === 'static') data.text = "Nuevo Texto";
+    if(type === 'hline' || type === 'vline') { data.length = 50; data.size = 2; }
+    
+    tplData[lector].elements[id] = data;
+    renderNodoEnCanvas(id, data);
+    seleccionarCampo(document.getElementById('tpl-' + id));
+}
+
+function eliminarElementoActual() {
+    if(!activeField) return;
+    const lector = document.getElementById('editor-lector').value;
+    const id = activeField.dataset.id;
+    if(tplData[lector] && tplData[lector].elements[id]) {
+        delete tplData[lector].elements[id];
+    }
+    activeField.remove();
+    seleccionarCampo(null);
+}
+
+function seleccionarCampo(el) {
+    document.querySelectorAll('.draggable-field').forEach(f => f.classList.remove('active-field'));
+    activeField = el;
+    
+    const pHint = document.getElementById('prop-hint');
+    const pControls = document.getElementById('prop-controls');
+    if (!el) {
+        pHint.style.display = 'block';
+        pControls.style.display = 'none';
+        return;
+    }
+    
+    el.classList.add('active-field');
+    pHint.style.display = 'none';
+    pControls.style.display = 'block';
+    
+    const type = el.dataset.type;
+    const s = parseFloat(el.dataset.scale) || 1.0;
+    
+    document.getElementById('editor-size').value = s;
+    document.getElementById('editor-size-val').textContent = s.toFixed(1) + 'x';
+    
+    document.getElementById('editor-x').value = parseFloat(el.style.left) || 0;
+    document.getElementById('editor-y').value = parseFloat(el.style.top) || 0;
+    
+    const ctrlText = document.getElementById('ctrl-text');
+    const ctrlLength = document.getElementById('ctrl-length');
+    const ctrlBold = document.getElementById('ctrl-bold');
+    
+    const lector = document.getElementById('editor-lector').value;
+    const data = tplData[lector].elements[el.dataset.id];
+    
+    if(type === 'static') {
+        ctrlText.style.display = 'block';
+        document.getElementById('editor-text-val').value = el.textContent;
+    } else {
+        ctrlText.style.display = 'none';
+    }
+    
+    if (type === 'field' || type === 'static') {
+        ctrlBold.style.display = 'block';
+        let b = data.bold;
+        if (b === undefined) b = (el.dataset.id === 'secuencia' || el.dataset.id === 'modelo');
+        document.getElementById('editor-bold').checked = b;
+    } else {
+        ctrlBold.style.display = 'none';
+        document.getElementById('editor-bold').checked = false;
+    }
+    
+    if(type === 'hline' || type === 'vline') {
+        ctrlLength.style.display = 'block';
+        document.getElementById('lbl-editor-size').textContent = "Grosor Físico:";
+        const l = parseFloat(el.dataset.length) || 50;
+        document.getElementById('editor-length').value = l;
+        document.getElementById('editor-length-val').textContent = l + '%';
+    } else {
+        ctrlLength.style.display = 'none';
+        document.getElementById('lbl-editor-size').textContent = "Multiplicador de Tamaño:";
+    }
+    
+    const btnDel = document.getElementById('btn-del-el');
+    if(type === 'field' || type === 'qr') btnDel.style.display = 'none';
+    else btnDel.style.display = 'block';
+}
+
+function actualizarTamanoBase() {
+    if (!activeField) return;
+    const type = activeField.dataset.type;
+    const s = parseFloat(document.getElementById('editor-size').value);
+    document.getElementById('editor-size-val').textContent = s.toFixed(1) + 'x';
+    
+    const nx = parseFloat(document.getElementById('editor-x').value) || 0;
+    const ny = parseFloat(document.getElementById('editor-y').value) || 0;
+    
+    activeField.dataset.scale = s;
+    const lector = document.getElementById('editor-lector').value;
+    const id = activeField.dataset.id;
+    const data = tplData[lector].elements[id];
+    
+    data.size = s;
+    data.x = nx;
+    data.y = ny;
+    
+    if(type === 'field' || type === 'static') {
+        data.bold = document.getElementById('editor-bold').checked;
+    }
+    
+    if(type === 'static') {
+        data.text = document.getElementById('editor-text-val').value;
+    }
+    if(type === 'hline' || type === 'vline') {
+        const l = parseFloat(document.getElementById('editor-length').value);
+        document.getElementById('editor-length-val').textContent = l + '%';
+        data.length = l;
+        activeField.dataset.length = l;
+    }
+    
+    renderNodoEnCanvas(id, data);
+}
+
+async function guardarTemplate() {
+    const btn = document.getElementById('btn-save-tpl');
+    const msg = document.getElementById('tpl-msg');
+    try {
+        btn.textContent = "Guardando...";
+        const res = await fetch('/api/templates', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(tplData)
+        });
+        if(res.ok) {
+            msg.innerHTML = '<span style="color:#4CAF50">✓ Diseño Visual respaldado OK en el Servidor.</span>';
+            setTimeout(() => msg.innerHTML='', 3000);
+        }
+    } catch(e) {
+        msg.innerHTML = '<span style="color:#F44336">Error de red.</span>';
+    } finally {
+        btn.textContent = "💾 Guardar Diseño PDF/ZPL";
+    }
+}
+
+function initLabelCanvas() {
+    const cv = document.getElementById('print-canvas');
+    if(!cv) return;
+    
+    let isDragging = false;
+    let currentDrag = null;
+
+    cv.addEventListener('mousedown', (e) => {
+        const field = e.target.closest('.draggable-field');
+        if (field) {
+            isDragging = true;
+            currentDrag = field;
+            seleccionarCampo(field);
+        } else {
+            seleccionarCampo(null);
+        }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging || !currentDrag) return;
+        const rect = cv.getBoundingClientRect();
+        
+        let x = e.clientX - rect.left;
+        let y = e.clientY - rect.top;
+        x = Math.max(0, Math.min(x, rect.width));
+        y = Math.max(0, Math.min(y, rect.height));
+        
+        const px = (x / rect.width) * 100;
+        const py = (y / rect.height) * 100;
+        currentDrag.style.left = px + '%';
+        currentDrag.style.top = py + '%';
+        
+        // Update input boxes in real time
+        document.getElementById('editor-x').value = px.toFixed(1);
+        document.getElementById('editor-y').value = py.toFixed(1);
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDragging && currentDrag) {
+            const lector = document.getElementById('editor-lector').value;
+            const id = currentDrag.dataset.id;
+            if(tplData[lector] && tplData[lector].elements[id]) {
+                tplData[lector].elements[id].x = parseFloat(currentDrag.style.left);
+                tplData[lector].elements[id].y = parseFloat(currentDrag.style.top);
+            }
+        }
+        isDragging = false;
+        currentDrag = null;
+    });
 }

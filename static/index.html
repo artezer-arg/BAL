@@ -30,8 +30,10 @@
             <a href="#" id="nav-config" onclick="switchView('config', event)">Configuración Global</a>
             <a href="#" id="nav-mapping" onclick="switchView('mapping', event)">Mapeo de TXT</a>
             <a href="#" id="nav-readers" onclick="switchView('readers', event)">Config Lectores</a>
-            <a href="#">Inventario Buffer</a>
-            <a href="#">Órdenes Despacho</a>
+            <a href="#" id="nav-despacho" onclick="switchView('despacho', event)">Órdenes Despacho</a>
+            <a href="#" id="nav-historial" onclick="switchView('historial', event)">Historial Secuencias</a>
+            <a href="#" id="nav-buffer" onclick="switchView('buffer', event)">Operaciones Buffer</a>
+            <a href="#" id="nav-editor" onclick="switchView('editor', event)" style="color:#FF9800;">🎨 Editor Etiquetas</a>
         </nav>
     </aside>
 
@@ -170,10 +172,41 @@
                         <input type="password" id="cfg-pass">
                     </div>
                     <div class="input-group mt-1">
+                        <label>Secuencia Inicio Primer Camión:</label>
+                        <input type="number" id="cfg-camion-i" value="1">
+                    </div>
+                    <div class="input-group">
+                        <label>Capacidad Camión (Sets/Autos):</label>
+                        <input type="number" id="cfg-camion-c" value="24">
+                    </div>
+                    <div class="input-group mt-1">
                         <label>Carpeta Archivos TXT SFTP:</label>
                         <input type="text" id="folder-path" value="C:\SFTP\Toyota\">
                     </div>
-                    <button class="btn btn-secondary mt-1" onclick="guardarConfigGeneral()" id="btn-save-cfg">Guardar Generales</button>
+                    
+                    <div style="background: rgba(255,255,255,0.02); padding: 1.5rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); margin-top:2rem;">
+                        <h3 style="margin-top: 0; color:var(--accent); font-size:1.1rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; margin-bottom: 1rem;">Opciones de Impresión de Línea (Lector E)</h3>
+                        <div class="input-group">
+                            <label>Modo de Impresión Automática:</label>
+                            <select id="cfg-print-mode" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.5); color:white; border: 1px solid rgba(255,255,255,0.1); border-radius:4px;">
+                                <option value="OFF">Desactivado (Solo digital)</option>
+                                <option value="ZPL">Red Socket TCP (Cebras nativas por ZPL)</option>
+                                <option value="PDF">Generar PDF File (Para simular o lote local en servidor)</option>
+                            </select>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="input-group">
+                                <label>IP Destino Línea 1 (Asientos):</label>
+                                <input type="text" id="cfg-ip-l1" placeholder="Ej: 192.168.1.91">
+                            </div>
+                            <div class="input-group">
+                                <label>IP Destino Línea 2 (Puertas):</label>
+                                <input type="text" id="cfg-ip-l2" placeholder="Ej: 192.168.1.92">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-secondary mt-1" onclick="guardarConfigGeneral()" id="btn-save-cfg" style="width: 100%; margin-top: 2rem;">Guardar Generales</button>
                 </section>
             </div>
 
@@ -310,6 +343,220 @@
             </div>
             <button class="btn btn-secondary mt-1" onclick="guardarReglasLector()" id="btn-save-rules">Guardar Reglas de este Lector</button>
         </section>
+    </main>
+
+    <!-- MAIN: DESPACHO TRUCKS -->
+    <main id="despacho-view" class="dashboard hidden">
+        <header class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h2>Gestión de Camiones de Despacho</h2>
+                <p>Monitoreo en vivo del armado y carga en rampa según la secuencia sincronizada.</p>
+            </div>
+            <div style="background: rgba(255,255,255,0.05); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); display: flex; gap: 1rem; align-items: flex-end;">
+                <div class="input-group" style="margin: 0;">
+                    <label style="font-size: 0.8rem; margin-bottom: 3px;">Secuencia Inicio Camión #1</label>
+                    <input type="number" id="dsp-cfg-inicio" style="max-width: 90px; padding: 6px; text-align: center;">
+                </div>
+                <div class="input-group" style="margin: 0;">
+                    <label style="font-size: 0.8rem; margin-bottom: 3px;">Capacidad (Sets)</label>
+                    <input type="number" id="dsp-cfg-cap" style="max-width: 90px; padding: 6px; text-align: center;">
+                </div>
+                <button class="btn btn-primary" onclick="actualizarConfigDespacho()" id="btn-save-dsp" style="padding: 7px 15px;">Aplicar Lote</button>
+            </div>
+        </header>
+
+        <div class="truck-grid" id="truck-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem;">
+            <!-- Rendered by JS -->
+        </div>
+    </main>
+
+    <!-- MAIN: HISTORIAL -->
+    <main id="historial-view" class="dashboard hidden">
+        <header class="dashboard-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h2>Historial de Secuencias</h2>
+                <p>Monitor de trazabilidad histórica de los archivos físicos ingresados desde TASA.</p>
+            </div>
+            <div style="background: rgba(255,255,255,0.05); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); display: flex; gap: 1rem; align-items: center;">
+                <select id="flt-lector" onchange="renderHistorial()" style="padding: 8px; border-radius: 5px; background: rgba(0,0,0,0.5); color: white; border: 1px solid var(--accent); cursor: pointer;">
+                    <option value="ALL">🔍 Todos los Lectores</option>
+                    <option value="E">Lector E (Seat)</option>
+                    <option value="H">Lector H (Door)</option>
+                    <option value="A">Lector A</option>
+                    <option value="F">Lector F</option>
+                    <option value="J">Lector J</option>
+                </select>
+                <button class="btn btn-secondary" onclick="renderHistorial()" style="padding: 7px 15px;">🔄 Refresh</button>
+            </div>
+        </header>
+
+        <section class="glass-card" style="padding: 0; overflow: hidden;">
+            <div style="max-height: 60vh; overflow-y: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha de Lectura</th>
+                            <th>Lector</th>
+                            <th>Secuencia</th>
+                            <th>N° Chasis</th>
+                            <th>Cód. Padre (Suffix)</th>
+                            <th>Subarchivo TXT</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historial-body">
+                        <!-- Rendered by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- MAIN: BUFFER -->
+    <main id="buffer-view" class="dashboard hidden">
+        <header class="dashboard-header">
+            <h2>Inventario Pulmón / Buffer</h2>
+            <p>Escaneo físico de piezas desde Línea hacia Buffer, y de Buffer hacia Rampa de Camiones.</p>
+        </header>
+
+        <div style="display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 1.5rem;">
+            <!-- Column 1: Salida de Línea E (Pendientes) -->
+            <section class="glass-card" style="padding: 1rem;">
+                <h3 style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; margin-bottom: 1rem;">1. Salida de Línea (Ingreso a Buffer)</h3>
+                <div style="max-height: 50vh; overflow-y: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Línea</th>
+                                <th>Seq.</th>
+                                <th>Modelo Físico</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="buf-pendientes-body"></tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <!-- Column 2: Buffer Físico E -->
+            <section class="glass-card" style="padding: 1rem; border: 1px solid rgba(33, 150, 243, 0.4);">
+                <h3 style="border-bottom: 1px solid rgba(33, 150, 243, 0.4); padding-bottom: 0.5rem; margin-bottom: 1rem; color:#2196F3;">2. Buffer Físico (Stock E Disponible)</h3>
+                <div style="margin-bottom: 1rem; display: flex; gap: 0.5rem; align-items: center;">
+                    <label>Asignar al Camión:</label>
+                    <select id="buf-sel-camion" onchange="renderBuffer()" style="padding: 5px; flex: 1; border-radius: 4px; border: 1px solid #2196F3; background:rgba(0,0,0,0.5); color:white; cursor:pointer;">
+                    </select>
+                </div>
+                <div style="max-height: 45vh; overflow-y: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Buffer Hora</th>
+                                <th>Seq. Origen</th>
+                                <th>Modelo E</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="buf-real-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Column 3: Manifiesto Camion H -->
+            <section class="glass-card" style="padding: 1rem; border: 1px solid rgba(76, 175, 80, 0.4);">
+                <h3 style="border-bottom: 1px solid rgba(76, 175, 80, 0.4); padding-bottom: 0.5rem; margin-bottom: 1rem; color:#4CAF50;">3. Manifiesto Camión (Demanda H)</h3>
+                <p style="font-size:0.8rem; margin-bottom:1rem; opacity:0.8;">El verde valida 1 Asiento y 1 Panel en Buffer (Col. 2).</p>
+                <div style="max-height: 50vh; overflow-y: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>SEQ [H]</th>
+                                <th>Modelo [H]</th>
+                                <th>Estado Real</th>
+                            </tr>
+                        </thead>
+                        <tbody id="buf-manifest-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- MAIN: EDITOR DE ETIQUETAS -->
+    <main id="editor-view" class="dashboard hidden">
+        <header class="dashboard-header">
+            <h2>Módulo Creador Visual de Etiquetas JIT</h2>
+            <p>Diseña el ticket de picking arrastrando y soltando los campos sobre tu papel físico.</p>
+        </header>
+
+        <div style="display: flex; gap: 2rem; margin-top:1rem;">
+            <!-- Controles Izquierdos -->
+            <div style="flex: 0 0 320px; display:flex; flex-direction:column; gap:1.5rem;">
+                <div class="glass-card">
+                    <div class="form-group mb-1">
+                        <label>Lector de Origen:</label>
+                        <select id="editor-lector" onchange="cargarTemplateBase()" style="width:100%; padding:8px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.2); border-radius:4px;">
+                            <option value="E">Lector E (Asientos/Paneles)</option>
+                            <option value="H">Lector H (Demanda)</option>
+                            <option value="F">Lector F</option>
+                            <option value="A">Lector A</option>
+                            <option value="J">Lector J</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tamaño de Papel Físico:</label>
+                        <select id="editor-paper" onchange="cambiarPapel()" style="width:100%; padding:8px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.2); border-radius:4px;">
+                            <option value="10x6">100x60 mm (Estándar Picking)</option>
+                            <option value="10x10">100x100 mm (Etiqueta Cuadrada)</option>
+                            <option value="A5">Formato A5 (148x210 mm)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <h4 style="margin-top:0; color:var(--accent);">Herramientas Gráficas</h4>
+                    <div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.5rem;">
+                        <button class="btn btn-secondary" onclick="crearElemento('static')">+ 📝 Texto Estático</button>
+                        <button class="btn btn-secondary" onclick="crearElemento('hline')">+ ➖ Línea Horizontal</button>
+                        <button class="btn btn-secondary" onclick="crearElemento('vline')">+ ⏐ Línea Vertical</button>
+                    </div>
+                </div>
+
+                <div class="glass-card" id="editor-props">
+                    <h4 style="margin-top:0; color:var(--accent);">Propiedades del Elemento</h4>
+                    <p style="font-size:0.8rem; opacity:0.7; margin-bottom:1rem;" id="prop-hint">Ház clic en un campo del lienzo para editarlo.</p>
+                    
+                    <div id="prop-controls" style="display:none;">
+                        <div class="form-group mb-1" id="ctrl-text" style="display:none;">
+                            <label>Texto a Mostrar:</label>
+                            <input type="text" id="editor-text-val" oninput="actualizarTamanoBase()">
+                        </div>
+                        
+                        <div class="form-group mb-1">
+                            <label id="lbl-editor-size">Multiplicador de Tamaño:</label>
+                            <input type="range" id="editor-size" min="0.5" max="10" step="0.5" value="1" oninput="actualizarTamanoBase()">
+                            <span id="editor-size-val" style="font-family:var(--font-mono); font-size:0.8rem; display:block; text-align:right;">1.0x</span>
+                        </div>
+                        
+                        <div class="form-group mb-1" id="ctrl-length" style="display:none;">
+                            <label>Largo Total (%):</label>
+                            <input type="range" id="editor-length" min="2" max="100" step="1" value="50" oninput="actualizarTamanoBase()">
+                            <span id="editor-length-val" style="font-family:var(--font-mono); font-size:0.8rem; display:block; text-align:right;">50%</span>
+                        </div>
+                        
+                        <button class="btn" style="background:rgba(255,0,0,0.5); width:100%; color:white; padding:0.5rem; margin-top:0.5rem;" onclick="eliminarElementoActual()" id="btn-del-el">🗑 Borrar Elemento</button>
+                    </div>
+                </div>
+                
+                <button class="btn btn-primary" onclick="guardarTemplate()" id="btn-save-tpl" style="padding:1rem;">💾 Guardar Diseño PDF/ZPL</button>
+                <div id="tpl-msg" class="mt-1"></div>
+            </div>
+
+            <!-- Canvas Central -->
+            <div style="flex: 1; display:flex; justify-content:center; align-items:flex-start; background:rgba(0,0,0,0.3); border-radius:8px; padding:2rem; overflow:auto;">
+                <div id="print-canvas" style="background:white; color:black; position:relative; box-shadow:0 10px 30px rgba(0,0,0,0.5); transform-origin: top center; width: 100mm; height: 60mm; touch-action: none;">
+                    <!-- Renderizado dinámicamente por JS -->
+                </div>
+            </div>
+        </div>
     </main>
 
     <script src="/static/script.js"></script>
