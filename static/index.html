@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BAL - Motor JIS/JIT</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    
+    <!-- BARRA LATERAL (BRANDING) -->
+    <aside class="sidebar">
+        <div class="brand">
+            <h1 class="logo-text">BAL</h1>
+            <span class="badge">SYNC ENGINE</span>
+        </div>
+        <p class="subtitle">Toyota Boshoku Argentina<br>Logística & Producción JIS/JIT</p>
+        
+        <div class="server-status">
+            <div class="pulse-indicator"></div>
+            <span>Base de Datos Conectada</span>
+        </div>
+
+        <nav class="menu">
+            <a href="#" id="nav-dashboard" class="active" onclick="switchView('dashboard', event)">Panel Principal</a>
+            <a href="#" id="nav-catalog" onclick="switchView('catalog', event)">Catálogo BOM</a>
+            <a href="#" id="nav-config" onclick="switchView('config', event)">Configuración Global</a>
+            <a href="#" id="nav-mapping" onclick="switchView('mapping', event)">Mapeo de TXT</a>
+            <a href="#" id="nav-readers" onclick="switchView('readers', event)">Config Lectores</a>
+            <a href="#">Inventario Buffer</a>
+            <a href="#">Órdenes Despacho</a>
+        </nav>
+    </aside>
+
+    <!-- MAIN: DASHBOARD -->
+    <main id="dashboard-view" class="dashboard">
+        <header class="dashboard-header">
+            <h2>Sincronización de Archivos Maestros</h2>
+            <p>Lee el directorio local en busca de Avisos E/H provenientes de Toyota Zárate.</p>
+        </header>
+
+        <section class="glass-card action-panel">
+            <div class="action-info">
+                <h3>Estado del Escáner</h3>
+                <p>Presiona el botón para forzar una sincronización manual del directorio, o activa el Auto-Scan continuo.</p>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <button class="btn btn-primary btn-scan" id="btn-scan" onclick="escanearDirectorio()">
+                    Escanear Ahora
+                </button>
+                <button class="btn btn-secondary" id="btn-autoscan" onclick="toggleAutoScan()" style="display: flex; align-items: center; gap: 0.5rem; justify-content: center;">
+                    <span class="pulse-indicator" id="autoscan-pulse" style="display: none; background: #4CAF50; position: relative;"></span>
+                    Activar Auto-Scan
+                </button>
+            </div>
+        </section>
+
+        <section class="glass-card log-panel">
+            <div class="log-header">
+                <h3>Registro de Transacciones BAL</h3>
+                <span class="live-badge">EN VIVO</span>
+            </div>
+            <div class="log-table-container">
+                <table class="log-table">
+                    <thead>
+                        <tr>
+                            <th>HORA</th>
+                            <th>ARCHIVO</th>
+                            <th>CÓD. PADRE</th>
+                            <th>ESTADO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="log-body">
+                        <tr class="empty-row"><td colspan="4">Esperando actividad JIS/JIT...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- MAIN: CATÁLOGO BOM -->
+    <main id="catalog-view" class="dashboard hidden">
+        <header class="dashboard-header">
+            <h2>Gestión de Catálogo Maestro (BOM)</h2>
+            <p>Alta de productos y actualización masiva de recetas y componentes internos.</p>
+        </header>
+
+        <div class="config-grid">
+            <div class="config-col">
+                <section class="glass-card config-panel">
+                    <h3>Alta Manual de Variante / Pieza</h3>
+                    <p class="subtitle mb-1">Vincula un Código Padre con un componente físico (Hijo). Si el padre o el hijo no existen, se crearán.</p>
+                    
+                    <div class="input-group">
+                        <label>Código Variante Padre:</label>
+                        <input type="text" id="cat-padre" placeholder="Ej: LD23">
+                    </div>
+                    <div class="input-group">
+                        <label>Línea Producción Principal:</label>
+                        <input type="text" id="cat-linea" placeholder="Ej: Seat, Door, Armrest, Filtros, Garnish">
+                    </div>
+                    <div class="input-group mt-1">
+                        <label>Cód. SD Interno (Hijo):</label>
+                        <input type="text" id="cat-hijo" placeholder="Ej: A3B">
+                    </div>
+                    <div class="input-group">
+                        <label>Descripción Técnica:</label>
+                        <input type="text" id="cat-desc" placeholder="Ej: ARMREST ASSY">
+                    </div>
+                    <div class="input-group">
+                        <label>Posición Mano (Opcional):</label>
+                        <input type="text" id="cat-mano" placeholder="Ej: FR RH">
+                    </div>
+                    <div class="input-group">
+                        <label>Código TASA (Opcional):</label>
+                        <input type="text" id="cat-tasa" placeholder="Ej: 74210-0K190">
+                    </div>
+                    
+                    <button class="btn btn-primary mt-1" onclick="guardarAltaManual()" id="btn-save-cat">Registrar en BOM</button>
+                    <div id="cat-msg" class="mt-1"></div>
+                </section>
+            </div>
+
+            <div class="config-col">
+                <section class="glass-card config-panel">
+                    <h3>Importación Masiva (CSV)</h3>
+                    <p class="subtitle mb-1">Carga un archivo <code>.csv</code> separado por comas para inyectar todas las rutas masivamente a la BD.</p>
+                    
+                    <div class="import-zone" id="drop-zone" onclick="document.getElementById('file-uploader').click()">
+                        <p id="drop-text" style="font-weight: 600; font-size: 1.1rem;">Haz clic para buscar tu archivo .CSV</p>
+                        <p style="font-size:0.8rem; margin-top:0.5rem; opacity:0.7;">Formato de columnas mínimo esperado:<br>Padre, Hijo, Codigo TASA, Descripcion, PosicionMano, Linea</p>
+                        <input type="file" id="file-uploader" accept=".csv" style="display:none;" onchange="manejarArchivo(this)">
+                    </div>
+                    
+                    <button class="btn btn-secondary mt-1" id="btn-upload-csv" onclick="subirCsvMasivo()" disabled style="width: 100%;">Subir y Procesar Masivamente</button>
+                    <div id="upload-msg" class="mt-1"></div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <!-- MAIN: CONFIGURACIÓN GENERAL -->
+    <main id="config-view" class="dashboard hidden">
+        <header class="dashboard-header">
+            <h2>Configuración Global del Sistema</h2>
+            <p>Ajustes de conexión, base de datos y simulaciones transaccionales.</p>
+        </header>
+
+        <div class="config-grid">
+            <div class="config-col">
+                <section class="glass-card config-panel">
+                    <h3>Conexión y Directorios</h3>
+                    <div class="input-group">
+                        <label>Servidor Base de Datos:</label>
+                        <input type="text" id="cfg-server" placeholder="Ej: HILO-000">
+                    </div>
+                    <div class="input-group">
+                        <label>Nombre BD:</label>
+                        <input type="text" id="cfg-dbname" placeholder="Ej: BAL">
+                    </div>
+                    <div class="input-group">
+                        <label>Usuario BD (Vacío = Windows Auth):</label>
+                        <input type="text" id="cfg-user">
+                    </div>
+                    <div class="input-group">
+                        <label>Contraseña BD:</label>
+                        <input type="password" id="cfg-pass">
+                    </div>
+                    <div class="input-group mt-1">
+                        <label>Carpeta Archivos TXT SFTP:</label>
+                        <input type="text" id="folder-path" value="C:\SFTP\Toyota\">
+                    </div>
+                    <button class="btn btn-secondary mt-1" onclick="guardarConfigGeneral()" id="btn-save-cfg">Guardar Generales</button>
+                </section>
+            </div>
+
+            <div class="config-col">
+                <section class="glass-card config-panel">
+                    <h3>Ingreso Manual (Simulador TXT)</h3>
+                    <p class="subtitle mb-1">Forza la inserción de una secuencia en el sistema sin pasar por archivo.</p>
+                    <div class="input-group">
+                        <label>Lectora Variante (E/H/J):</label>
+                        <input type="text" id="sim-letra" value="E" maxlength="1">
+                    </div>
+                    <div class="input-group">
+                        <label>Código Padre Completo:</label>
+                        <input type="text" id="sim-padre" placeholder="Ej: LD23">
+                    </div>
+                    <div class="input-group">
+                        <label>Secuencia:</label>
+                        <input type="text" id="sim-sec" placeholder="Ej: 001">
+                    </div>
+                    <div class="input-group">
+                        <label>Nro. Chasis:</label>
+                        <input type="text" id="sim-chasis" placeholder="Ej: 8K11223344">
+                    </div>
+                    <button class="btn btn-primary mt-1" onclick="ejecutarSincronizacionManual()" id="btn-sim-scan">Simular Recepción Transaccional</button>
+                    <div id="sim-msg" class="mt-1"></div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <!-- MAIN: MAPEO TXT -->
+    <main id="mapping-view" class="dashboard hidden">
+        <header class="dashboard-header">
+            <h2>Mapeo Posicional TXT</h2>
+            <p>Define los offsets lógicos (inicio y ancho) para cada lectora en planta.</p>
+        </header>
+
+        <section class="glass-card config-panel" style="max-width: 800px; margin: 0 auto;">
+            <div class="tabs-letras" id="tabs-letras-map">
+                <button class="btn-tab active" onclick="cargarMapeoTXT('E', this)">Letra E</button>
+                <button class="btn-tab" onclick="cargarMapeoTXT('H', this)">Letra H</button>
+                <button class="btn-tab" onclick="cargarMapeoTXT('F', this)">Letra F</button>
+                <button class="btn-tab" onclick="cargarMapeoTXT('A', this)">Letra A</button>
+                <button class="btn-tab" onclick="cargarMapeoTXT('J', this)">Letra J</button>
+            </div>
+            <input type="hidden" id="map-current-letter-txt" value="E">
+            
+            <div class="mapping-table-container mt-1">
+                <table class="mapping-table">
+                    <thead>
+                        <tr>
+                            <th>Campo Extraído</th>
+                            <th>Posición Inicial</th>
+                            <th>Ancho de Cadena</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Nro. de Secuencia</td>
+                            <td><input type="number" id="map-sec-i"></td>
+                            <td><input type="number" id="map-sec-a"></td>
+                        </tr>
+                        <tr>
+                            <td>Sufijo Auto</td>
+                            <td><input type="number" id="map-suf-i"></td>
+                            <td><input type="number" id="map-suf-a"></td>
+                        </tr>
+                        <tr>
+                            <td>Color Exterior</td>
+                            <td><input type="number" id="map-col-i"></td>
+                            <td><input type="number" id="map-col-a"></td>
+                        </tr>
+                        <tr>
+                            <td>Modelo Base</td>
+                            <td><input type="number" id="map-mod-i"></td>
+                            <td><input type="number" id="map-mod-a"></td>
+                        </tr>
+                        <tr>
+                            <td>Número de Chasis</td>
+                            <td><input type="number" id="map-cha-i"></td>
+                            <td><input type="number" id="map-cha-a"></td>
+                        </tr>
+                        <tr>
+                            <td>Fecha Cadena</td>
+                            <td><input type="number" id="map-fec-i"></td>
+                            <td><input type="number" id="map-fec-a"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <button class="btn btn-secondary mt-1" onclick="guardarMapeoTXT()" id="btn-save-map-txt">Guardar Offsets para esta Letra</button>
+        </section>
+    </main>
+
+    <!-- MAIN: CONFIG LECTORES -->
+    <main id="readers-view" class="dashboard hidden">
+        <header class="dashboard-header">
+            <h2>Configuración y Reglas de Lectores</h2>
+            <p>Define límites de topes de secuencia y activa reglas de integridad individuales.</p>
+        </header>
+
+        <section class="glass-card config-panel" style="max-width: 800px; margin: 0 auto;">
+            <div class="tabs-letras" id="tabs-letras-rules">
+                <button class="btn-tab active" onclick="cargarReglasLector('E', this)">Letra E</button>
+                <button class="btn-tab" onclick="cargarReglasLector('H', this)">Letra H</button>
+                <button class="btn-tab" onclick="cargarReglasLector('F', this)">Letra F</button>
+                <button class="btn-tab" onclick="cargarReglasLector('A', this)">Letra A</button>
+                <button class="btn-tab" onclick="cargarReglasLector('J', this)">Letra J</button>
+            </div>
+            <input type="hidden" id="map-current-letter-rules" value="E">
+            
+            <div class="mapping-table-container mt-1">
+                <table class="mapping-table">
+                    <thead>
+                        <tr>
+                            <th colspan="2">Reglas Duras y Exclusiones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="width: 50%;"><strong>Tope Secuencia (Reseteo a 1)</strong><br><small style="opacity:0.7">El límite en el que la secuencia empieza de 0.</small></td>
+                            <td><input type="number" id="rule-sec-t" placeholder="Ej: 9999 o 999" style="width: 100%; border-color: var(--accent);"></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Validar Saltos y Duplicados</strong><br><small style="opacity:0.7">Detiene la inserción si detecta error numérico.</small></td>
+                            <td><label style="cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem;"><input type="checkbox" id="rule-sec-strict" style="width:18px; height:18px;" checked> Habilitar</label></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Códigos Padres Ignorados</strong><br><small style="opacity:0.7">Separados por comas para suprimir de este lector.</small></td>
+                            <td><input type="text" id="rule-ignored" placeholder="Ej: C323, LD23" style="width: 100%; border-color: var(--accent);"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <button class="btn btn-secondary mt-1" onclick="guardarReglasLector()" id="btn-save-rules">Guardar Reglas de este Lector</button>
+        </section>
+    </main>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
