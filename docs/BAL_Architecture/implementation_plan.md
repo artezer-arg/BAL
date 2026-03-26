@@ -1,41 +1,33 @@
-# Goal Description
-The system must unified the ingestion structure for all TASA Broadcasts (E, H, F, A, J) because they all share the exact same intrinsic data structure (Sequence, Date, Chassis, Parent Code).
-Furthermore, the system needs a dedicated **Buscador de Secuencias** (Sequence History List) to globally track the real-time drops of these TXT files.
+# Arquitectura: Editor de Etiquetas Avanzado (Multitipo)
 
-## Architectural Correction (Unified Ingestion)
-Previously, the backend hardcoded Lector `H` as a "Dispatch Event" and Lector `E` as a "Production Event", routing them to different tables.
-Based on production reality:
-- **Lector E:** Triggers production of Seats.
-- **Lector H:** Triggers production of Doors (and acts as a dispatch timing signal).
-- Both must land directly in `t_solicitudes_recepcion` as unified broadcast arrivals from TASA.
+## Visión General
+El editor visual actuamente posiciona 6 "campos de base de datos" específicos. Para convertirlo en un diseñador de tickets completo, daremos al usuario una "Caja de Herramientas" para instanciar elementos arbitrarios geométricos y tipográficos.
 
-## Proposed Changes
+## 1. Tipificación de Nodos (`config.json`)
+Agregaremos una propiedad `type` a cada elemento dentro del archivo JSON. De esta manera, el diccionario híbrido soportará N-cantidad de elementos.
 
-### 1. Unified Table Routing
-#### [MODIFY] [app.py](file:///c:/Users/artez/.gemini/antigravity/scratch/tbar_sync/app.py)
-- Refactor `procesar_carpeta_sftp()`: Remove the restrictive `elif letra == 'H'` block.
-- **ALL LETTERS (E, H, A, F, J)** will instantly generate a record in `t_solicitudes_recepcion`.
-- The system will query the BOM (`c_bom_recetas`) and queue the respective internal orders into `t_ordenes_internas` regardless of the letter. If `H` brings Door recipes, they will be queued correctly.
+### Estructura Propuesta de Elementos:
+1. **Campos Fijos JIT:** `{"type": "field", "id": "modelo", "x": 50, ...}`
+2. **Textos Estáticos:** `{"type": "static", "text": "ENSAMBLE TBAR", "size": 2, ...}`
+3. **Líneas Horizontales:** `{"type": "hline", "width": 80, "thickness": 2, ...}` (El anchor XY será el centro).
+4. **Líneas Verticales:** `{"type": "vline", "height": 60, "thickness": 2, ...}`
 
-### 2. View Historical Sequences
-#### [MODIFY] [app.py](file:///c:/Users/artez/.gemini/antigravity/scratch/tbar_sync/app.py)
-- Create `/api/secuencias` endpoint.
-- Since everything is now unified, the query is a simple, ultra-fast `SELECT` directly against `t_solicitudes_recepcion` joined with `c_productos_cliente`. No complex `UNION ALL` needed anymore!
-- Can easily filter by `nombre_archivo_sftp LIKE 'E%'` or `'H%'`.
+## 2. Caja de Herramientas UI (Frontend Javascript)
+Se añadirá una barra de herramientas arriba del lienzo en la web con botones:
+`[ + Texto Estático ]` `[ + Línea Horizontal ]` `[ + Línea Vertical ]`.
 
-#### [MODIFY] [static/index.html](file:///c:/Users/artez/.gemini/antigravity/scratch/tbar_sync/static/index.html)
-- Inject `<main id="historial-view">` with a native `<table>` interface.
-- Includes a primary filter dropdown: `Todos`, `Lector E`, `Lector H`.
+- Al seleccionar un "Texto Estático" agregado, el menú izquierdo mostrará un `<input text>` para que el usuario escriba arbitrariamente lo que quiera que diga esa etiqueta.
+- Al seleccionar una Línea, el slider de "Tamaño" pasará a representar el "Grosor" (Thickness), y aparecerá un slider adicional dictando el "Largo" de esa línea (Width/Height en %).
 
-#### [MODIFY] [static/script.js](file:///c:/Users/artez/.gemini/antigravity/scratch/tbar_sync/static/script.js)
-- Build dynamic Javascript filtering loop mapping directly against the unified JSON payload.
+## 3. Traducción de Geometría al Servidor (`printer.py`)
 
-## User Review Required
-> [!IMPORTANT]
-> - Since both `E` and `H` are now just production requests inserted into the same master table, how exactly does a component logically transition to "Despachado"? 
-> - If `E` makes Seats and `H` makes Doors, does reading an `H` TXT automatically mean the corresponding Seat for that sequence should be marked as Shipped? Or do the operators use a completely different physical scanner gun to dispatch both into the trucks?
+Python aprenderá a leer un nodo y dibujar geometrías:
 
-## Verification Plan
-### Automated Tests
-- Drop an `H` TXT and an `E` TXT into the SFTP simulator.
-- Verify both appear smoothly on the same chronological timeline in the History View.
+### En ZPL (Zebra)
+Utilizaremos el comando nativo `^GB` (Graphic Box) de Zebra, el cual sirve precisamente para líneas y rectángulos puros en dot-matrix:
+- H-Line: `^FO{x},{y}^GB{width_dots},{thickness},{thickness}^FS`
+- V-Line: `^FO{x},{y}^GB{thickness},{height_dots},{thickness}^FS`
+- Text Fijo: Comando de texto normal `^A0N` inyectando el string literal que el usuario guardó en el `type: "static"`.
+
+### En PDF (`reportlab`)
+Utilizaremos el `canvas.rect(x, y, w, h, fill=1)` para rellenar polígonos puros de color negro sólido que simularán el grosor perfecto dictado en el diseñador Web.
