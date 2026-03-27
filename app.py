@@ -575,7 +575,7 @@ def manual_sync():
     secuencia = data.get('secuencia', '')
     chasis = data.get('chasis', '')
     fecha = datetime.now().strftime("%Y%m%d%H%M")
-    archivo = f"MANUAL_{letra}_{secuencia}.txt"
+    archivo = f"{letra}_MANUAL_{secuencia}.txt"
 
     try:
         conn = obtener_conexion_db()

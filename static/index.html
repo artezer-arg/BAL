@@ -215,8 +215,14 @@
                     <h3>Ingreso Manual (Simulador TXT)</h3>
                     <p class="subtitle mb-1">Forza la inserción de una secuencia en el sistema sin pasar por archivo.</p>
                     <div class="input-group">
-                        <label>Lectora Variante (E/H/J):</label>
-                        <input type="text" id="sim-letra" value="E" maxlength="1">
+                        <label>Lectora Variante Simulada:</label>
+                        <select id="sim-letra" style="width: 100%; border-color: var(--accent); padding: 5px; border-radius: 4px; background: rgba(0,0,0,0.5); color: white;">
+                            <option value="E">Lector E (Producible / A Buffer)</option>
+                            <option value="H">Lector H (Despachable / A Camión)</option>
+                            <option value="F">Lector F</option>
+                            <option value="A">Lector A</option>
+                            <option value="J">Lector J</option>
+                        </select>
                     </div>
                     <div class="input-group">
                         <label>Código Padre Completo:</label>
