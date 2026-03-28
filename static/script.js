@@ -19,6 +19,13 @@ function switchView(viewName, e) {
     const view = document.getElementById(`${viewName}-view`);
     if(view) view.classList.remove('hidden');
     
+    if (viewName === 'dashboard') {
+        renderDashboardTopMetrics();
+        if (!window.dashInterval) window.dashInterval = setInterval(renderDashboardTopMetrics, 10000);
+    } else {
+        if (window.dashInterval) { clearInterval(window.dashInterval); window.dashInterval = null; }
+    }
+    
     if (viewName === 'despacho') {
         renderTrucks();
         if (!despachoInterval) despachoInterval = setInterval(renderTrucks, 3000);
@@ -657,6 +664,7 @@ async function escanearDirectorio() {
             logsBody.prepend(tr); 
             setTimeout(() => { tr.style.opacity = 1; tr.style.transform = "translateY(0)"; }, 50);
         });
+        renderDashboardTopMetrics();
     } catch (e) {
         console.error(e);
         if (!isAutoScanning) {
@@ -990,4 +998,65 @@ function initLabelCanvas() {
         isDragging = false;
         currentDrag = null;
     });
+}
+
+// ==========================
+// Dashboard Metrics (Chart)
+// ==========================
+async function renderDashboardTopMetrics() {
+    try {
+        const res = await fetch('/api/secuencias');
+        const data = await res.json();
+        if (data.status !== 'success') return;
+        
+        const seqs = data.data;
+        const eTot = document.getElementById('dash-tot-seq');
+        if(eTot) eTot.textContent = seqs.length;
+        
+        const counts = {};
+        seqs.forEach(s => {
+            const p = s.padre || "Desc.";
+            counts[p] = (counts[p] || 0) + 1;
+        });
+        
+        const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+        const max = sorted.length > 0 ? sorted[0][1] : 1;
+        
+        const chart = document.getElementById('models-chart-container');
+        if (!chart) return;
+        chart.innerHTML = '';
+        
+        if (sorted.length === 0) {
+            chart.innerHTML = '<div style="text-align:center; opacity:0.5; margin-top:2rem;">Sin datos aún</div>';
+            return;
+        }
+        
+        const colors = ['#1C8281', '#28B4B4', '#55D4D4', '#8BE4E4', '#BFFFFF']; // Teal Gradient Hydra Corps
+        
+        sorted.forEach(([model, qty], i) => {
+            const pct = Math.max((qty / max) * 100, 5);
+            const color = colors[i % colors.length];
+            const tColor = i === 4 ? '#111827' : 'white'; // Dark text for lightest bar
+            chart.innerHTML += `
+            <div class="chart-row">
+                <div class="chart-label" title="${model}">${model}</div>
+                <div class="chart-bar-container">
+                    <div class="chart-bar-fill" style="width:0%; background:${color}; color:${tColor};">
+                        ${qty}
+                    </div>
+                </div>
+            </div>`;
+        });
+        
+        // Trigger reflow for animation
+        setTimeout(() => {
+            const fills = chart.querySelectorAll('.chart-bar-fill');
+            fills.forEach((fill, i) => {
+                const qty = sorted[i][1];
+                const pct = Math.max((qty / max) * 100, 5);
+                fill.style.width = pct + '%';
+            });
+        }, 50);
+        
+    } catch(e) { console.error("Error rendering chart", e); }
 }

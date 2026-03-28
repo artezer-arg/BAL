@@ -3,568 +3,521 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BAL - Motor JIS/JIT</title>
+    <title>Youcare BAL Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     
-    <!-- BARRA LATERAL (BRANDING) -->
-    <aside class="sidebar">
-        <div class="brand">
-            <h1 class="logo-text">BAL</h1>
-            <span class="badge">SYNC ENGINE</span>
+    <!-- TOP NAVIGATION BAR -->
+    <header class="topbar">
+        <div class="brand" style="display: flex; flex-direction: column; justify-content: center; gap: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <h1 style="font-size: 2.2rem; font-weight: 800; color: #2D2D2D; margin: 0; line-height: 0.9; font-family: 'Inter', sans-serif; letter-spacing: -1px;">BAL</h1>
+                <span style="background: #115E59; color: #FFFFFF; font-size: 0.65rem; font-weight: 800; padding: 4px 8px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); letter-spacing: 0.5px;">SYNC ENGINE</span>
+            </div>
+            <div style="display: flex; flex-direction: column; line-height: 1.4; margin-top: 2px;">
+                <span style="font-size: 0.85rem; color: #6B7280; font-weight: 400;">Toyota Boshoku Argentina</span>
+                <span style="font-size: 0.85rem; color: #6B7280; font-weight: 400;">Logística & Producción JIS/JIT</span>
+            </div>
         </div>
-        <p class="subtitle">Toyota Boshoku Argentina<br>Logística & Producción JIS/JIT</p>
         
-        <div class="server-status">
-            <div class="pulse-indicator"></div>
-            <span>Base de Datos Conectada</span>
-        </div>
-
-        <nav class="menu">
-            <a href="#" id="nav-dashboard" class="active" onclick="switchView('dashboard', event)">Panel Principal</a>
-            <a href="#" id="nav-catalog" onclick="switchView('catalog', event)">Catálogo BOM</a>
-            <a href="#" id="nav-config" onclick="switchView('config', event)">Configuración Global</a>
-            <a href="#" id="nav-mapping" onclick="switchView('mapping', event)">Mapeo de TXT</a>
-            <a href="#" id="nav-readers" onclick="switchView('readers', event)">Config Lectores</a>
-            <a href="#" id="nav-despacho" onclick="switchView('despacho', event)">Órdenes Despacho</a>
-            <a href="#" id="nav-historial" onclick="switchView('historial', event)">Historial Secuencias</a>
-            <a href="#" id="nav-buffer" onclick="switchView('buffer', event)">Operaciones Buffer</a>
-            <a href="#" id="nav-editor" onclick="switchView('editor', event)" style="color:#FF9800;">🎨 Editor Etiquetas</a>
+        <nav class="menu top-menu">
+            <a href="#" id="nav-dashboard" class="active" onclick="switchView('dashboard', event)">Monitor</a>
+            <a href="#" id="nav-buffer" onclick="switchView('buffer', event)">Buffer JIT</a>
+            <a href="#" id="nav-despacho" onclick="switchView('despacho', event)">Despachos</a>
+            <a href="#" id="nav-catalog" onclick="switchView('catalog', event)">Catálogo</a>
+            <a href="#" id="nav-editor" onclick="switchView('editor', event)">Reporte ZPL</a>
+            <a href="#" id="nav-settings" onclick="switchView('settings', event)">Ajustes</a>
         </nav>
-    </aside>
+    </header>
 
-    <!-- MAIN: DASHBOARD -->
-    <main id="dashboard-view" class="dashboard">
-        <header class="dashboard-header">
-            <h2>Sincronización de Archivos Maestros</h2>
-            <p>Lee el directorio local en busca de Avisos E/H provenientes de Toyota Zárate.</p>
-        </header>
+    <div class="app-body">
+        
+        <!-- MAIN: DASHBOARD -->
+        <main id="dashboard-view" class="dashboard">
+            <header class="dashboard-header" style="display:flex; justify-content:space-between; align-items:flex-end;">
+                <div>
+                    <h2>Company Overview</h2>
+                    <p>Monitorea métricas en tiempo real y controla la ingesta de archivos.</p>
+                </div>
+                <button class="btn btn-secondary" onclick="switchView('historial', event)">Historial Completo</button>
+            </header>
 
-        <section class="glass-card action-panel">
-            <div class="action-info">
-                <h3>Estado del Escáner</h3>
-                <p>Presiona el botón para forzar una sincronización manual del directorio, o activa el Auto-Scan continuo.</p>
-            </div>
-            <div style="display: flex; gap: 1rem; align-items: center;">
-                <button class="btn btn-primary btn-scan" id="btn-scan" onclick="escanearDirectorio()">
-                    Escanear Ahora
-                </button>
-                <button class="btn btn-secondary" id="btn-autoscan" onclick="toggleAutoScan()" style="display: flex; align-items: center; gap: 0.5rem; justify-content: center;">
-                    <span class="pulse-indicator" id="autoscan-pulse" style="display: none; background: #4CAF50; position: relative;"></span>
-                    Activar Auto-Scan
-                </button>
-            </div>
-        </section>
-
-        <section class="glass-card log-panel">
-            <div class="log-header">
-                <h3>Registro de Transacciones BAL</h3>
-                <span class="live-badge">EN VIVO</span>
-            </div>
-            <div class="log-table-container">
-                <table class="log-table">
-                    <thead>
-                        <tr>
-                            <th>HORA</th>
-                            <th>ARCHIVO</th>
-                            <th>CÓD. PADRE</th>
-                            <th>ESTADO</th>
-                        </tr>
-                    </thead>
-                    <tbody id="log-body">
-                        <tr class="empty-row"><td colspan="4">Esperando actividad JIS/JIT...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    </main>
-
-    <!-- MAIN: CATÁLOGO BOM -->
-    <main id="catalog-view" class="dashboard hidden">
-        <header class="dashboard-header">
-            <h2>Gestión de Catálogo Maestro (BOM)</h2>
-            <p>Alta de productos y actualización masiva de recetas y componentes internos.</p>
-        </header>
-
-        <div class="config-grid">
-            <div class="config-col">
-                <section class="glass-card config-panel">
-                    <h3>Alta Manual de Variante / Pieza</h3>
-                    <p class="subtitle mb-1">Vincula un Código Padre con un componente físico (Hijo). Si el padre o el hijo no existen, se crearán.</p>
-                    
-                    <div class="input-group">
-                        <label>Código Variante Padre:</label>
-                        <input type="text" id="cat-padre" placeholder="Ej: LD23">
-                    </div>
-                    <div class="input-group">
-                        <label>Línea Producción Principal:</label>
-                        <input type="text" id="cat-linea" placeholder="Ej: Seat, Door, Armrest, Filtros, Garnish">
-                    </div>
-                    <div class="input-group mt-1">
-                        <label>Cód. SD Interno (Hijo):</label>
-                        <input type="text" id="cat-hijo" placeholder="Ej: A3B">
-                    </div>
-                    <div class="input-group">
-                        <label>Descripción Técnica:</label>
-                        <input type="text" id="cat-desc" placeholder="Ej: ARMREST ASSY">
-                    </div>
-                    <div class="input-group">
-                        <label>Posición Mano (Opcional):</label>
-                        <input type="text" id="cat-mano" placeholder="Ej: FR RH">
-                    </div>
-                    <div class="input-group">
-                        <label>Código TASA (Opcional):</label>
-                        <input type="text" id="cat-tasa" placeholder="Ej: 74210-0K190">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 0.5rem;">
+                <section class="glass-card highlight-panel" style="display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <h3>Resumen de Operación</h3>
+                        <div style="font-size: 3rem; font-weight: 800; color: var(--brand-dark); line-height: 1;">
+                            <span id="dash-tot-seq">0</span>
+                        </div>
+                        <p style="margin-bottom: 2rem;">Secuencias Procesadas Totales</p>
                     </div>
                     
-                    <button class="btn btn-primary mt-1" onclick="guardarAltaManual()" id="btn-save-cat">Registrar en BOM</button>
-                    <div id="cat-msg" class="mt-1"></div>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <button class="btn btn-primary btn-scan" id="btn-scan" onclick="escanearDirectorio()" style="box-shadow: 0 4px 14px rgba(28, 130, 129, 0.4) !important;">
+                            Escanear Ahora
+                        </button>
+                        <button class="btn btn-secondary" id="btn-autoscan" onclick="toggleAutoScan()" style="background:#FFFFFF !important; border-color:transparent !important; box-shadow:0 2px 8px rgba(0,0,0,0.05) !important;">
+                            <span class="pulse-indicator" id="autoscan-pulse" style="display: none; background: var(--success); position: relative;"></span>
+                            Activar Auto-Scan
+                        </button>
+                    </div>
+                </section>
+                
+                <section class="glass-card" style="padding: 1.5rem 2rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
+                        <div>
+                            <h3 style="margin-bottom:0;">Top Modelos</h3>
+                            <p style="font-size:0.8rem; color:var(--text-secondary);">Modelos de Asientos Recibidos</p>
+                        </div>
+                        <button class="btn btn-secondary" style="padding:0.4rem 0.8rem; border-radius:8px;" onclick="renderDashboardTopMetrics()">↻</button>
+                    </div>
+                    <div id="models-chart-container" style="display:flex; flex-direction:column; gap:0.9rem; min-height: 150px;">
+                        <!-- JS renders bars here -->
+                        <div style="text-align:center; color:var(--text-secondary); opacity:0.5; margin-top:2rem;">Calculando...</div>
+                    </div>
                 </section>
             </div>
 
-            <div class="config-col">
-                <section class="glass-card config-panel">
-                    <h3>Importación Masiva (CSV)</h3>
-                    <p class="subtitle mb-1">Carga un archivo <code>.csv</code> separado por comas para inyectar todas las rutas masivamente a la BD.</p>
-                    
-                    <div class="import-zone" id="drop-zone" onclick="document.getElementById('file-uploader').click()">
-                        <p id="drop-text" style="font-weight: 600; font-size: 1.1rem;">Haz clic para buscar tu archivo .CSV</p>
-                        <p style="font-size:0.8rem; margin-top:0.5rem; opacity:0.7;">Formato de columnas mínimo esperado:<br>Padre, Hijo, Codigo TASA, Descripcion, PosicionMano, Linea</p>
-                        <input type="file" id="file-uploader" accept=".csv" style="display:none;" onchange="manejarArchivo(this)">
+            <section class="glass-card log-panel">
+                <div class="log-header">
+                    <h3>Registro de Transacciones BAL</h3>
+                    <span class="live-badge">EN VIVO</span>
+                </div>
+                <div class="log-table-container">
+                    <table class="log-table">
+                        <thead>
+                            <tr>
+                                <th>HORA</th>
+                                <th>ARCHIVO</th>
+                                <th>CÓD. PADRE</th>
+                                <th>ESTADO</th>
+                            </tr>
+                        </thead>
+                        <tbody id="log-body">
+                            <tr class="empty-row"><td colspan="4">Esperando actividad JIS/JIT...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <!-- MAIN: HISTORIAL (Sub-Monitor) -->
+        <main id="historial-view" class="dashboard hidden">
+            <header class="dashboard-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <h2>Historial de Secuencias</h2>
+                    <p>Monitor de trazabilidad histórica de los archivos físicos ingresados desde TASA.</p>
+                </div>
+                <div style="background: var(--bg-main); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05); display: flex; gap: 1rem; align-items: center;">
+                    <select id="flt-lector" onchange="renderHistorial()" style="padding: 10px; border-radius: 8px; border: 1px solid var(--border-soft); background: white; cursor: pointer;">
+                        <option value="ALL">🔍 Todos los Lectores</option>
+                        <option value="E">Lector E (Seat)</option>
+                        <option value="H">Lector H (Door)</option>
+                        <option value="A">Lector A</option>
+                        <option value="F">Lector F</option>
+                        <option value="J">Lector J</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="renderHistorial()" style="padding: 10px 15px;">🔄 Refresh</button>
+                </div>
+            </header>
+
+            <section class="glass-card" style="padding: 0; overflow: hidden;">
+                <div style="max-height: 60vh; overflow-y: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha de Lectura</th>
+                                <th>Lector</th>
+                                <th>Secuencia</th>
+                                <th>N° Chasis</th>
+                                <th>Cód. Padre (Suffix)</th>
+                                <th>Subarchivo TXT</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historial-body">
+                            <!-- Rendered by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <!-- MAIN: BUFFER -->
+        <main id="buffer-view" class="dashboard hidden">
+            <header class="dashboard-header">
+                <h2>Inventario Pulmón / Buffer</h2>
+                <p>Escaneo físico de piezas desde Línea hacia Buffer, y de Buffer hacia Rampa de Camiones.</p>
+            </header>
+
+            <div style="display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 1.5rem;">
+                <!-- Column 1: Salida de Línea E (Pendientes) -->
+                <section class="glass-card" style="padding: 1.5rem;">
+                    <h3 style="border-bottom: 1px solid var(--border-soft); padding-bottom: 0.5rem; margin-bottom: 1rem;">1. Salida de Línea</h3>
+                    <div style="max-height: 50vh; overflow-y: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr><th>Línea</th><th>Seq.</th><th>Modelo</th><th>Acción</th></tr>
+                            </thead>
+                            <tbody id="buf-pendientes-body"></tbody>
+                        </table>
                     </div>
-                    
-                    <button class="btn btn-secondary mt-1" id="btn-upload-csv" onclick="subirCsvMasivo()" disabled style="width: 100%;">Subir y Procesar Masivamente</button>
-                    <div id="upload-msg" class="mt-1"></div>
+                </section>
+                
+                <!-- Column 2: Buffer Físico E -->
+                <section class="glass-card" style="padding: 1.5rem; border: 1px solid var(--brand-primary) !important;">
+                    <h3 style="border-bottom: 1px solid rgba(59, 130, 246, 0.2); padding-bottom: 0.5rem; margin-bottom: 1rem; color:var(--brand-primary) !important;">2. Buffer Físico (Stock E Disponible)</h3>
+                    <div style="margin-bottom: 1rem; display: flex; gap: 0.5rem; align-items: center;">
+                        <label style="font-size:0.85rem; font-weight:600; color:var(--text-secondary);">Asignar al Camión:</label>
+                        <select id="buf-sel-camion" onchange="renderBuffer()" style="padding: 8px; flex: 1; border-radius: 8px; border: 1px solid var(--brand-primary); cursor:pointer;">
+                        </select>
+                    </div>
+                    <div style="max-height: 45vh; overflow-y: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr><th>Hora</th><th>Seq.</th><th>Modelo</th><th>Acción</th></tr>
+                            </thead>
+                            <tbody id="buf-real-body"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Column 3: Manifiesto Camion H -->
+                <section class="glass-card" style="padding: 1.5rem; border: 1px solid var(--success) !important;">
+                    <h3 style="border-bottom: 1px solid rgba(52, 211, 153, 0.2); padding-bottom: 0.5rem; margin-bottom: 1rem; color:var(--success) !important;">3. Manifiesto Camión (Demanda H)</h3>
+                    <div style="max-height: 50vh; overflow-y: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr><th>SEQ [H]</th><th>Modelo [H]</th><th>Estado</th></tr>
+                            </thead>
+                            <tbody id="buf-manifest-body"></tbody>
+                        </table>
+                    </div>
                 </section>
             </div>
-        </div>
-    </main>
+        </main>
 
-    <!-- MAIN: CONFIGURACIÓN GENERAL -->
-    <main id="config-view" class="dashboard hidden">
-        <header class="dashboard-header">
-            <h2>Configuración Global del Sistema</h2>
-            <p>Ajustes de conexión, base de datos y simulaciones transaccionales.</p>
-        </header>
+        <!-- MAIN: DESPACHO TRUCKS -->
+        <main id="despacho-view" class="dashboard hidden">
+            <header class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <h2>Gestión de Camiones de Despacho</h2>
+                    <p>Monitoreo en vivo del armado y carga en rampa según la secuencia sincronizada.</p>
+                </div>
+                <div style="background: var(--bg-main); padding: 15px; border-radius: 12px; border: 1px solid var(--border-soft); display: flex; gap: 1rem; align-items: flex-end;">
+                    <div class="input-group" style="margin: 0;">
+                        <label style="margin-bottom: 3px;">Secuencia Inicio Camión #1</label>
+                        <input type="number" id="dsp-cfg-inicio" style="max-width: 90px; padding: 10px; text-align: center;">
+                    </div>
+                    <div class="input-group" style="margin: 0;">
+                        <label style="margin-bottom: 3px;">Capacidad (Sets)</label>
+                        <input type="number" id="dsp-cfg-cap" style="max-width: 90px; padding: 10px; text-align: center;">
+                    </div>
+                    <button class="btn btn-primary" onclick="actualizarConfigDespacho()" id="btn-save-dsp" style="padding: 10px 20px;">Aplicar Lote</button>
+                </div>
+            </header>
 
-        <div class="config-grid">
-            <div class="config-col">
-                <section class="glass-card config-panel">
-                    <h3>Conexión y Directorios</h3>
-                    <div class="input-group">
-                        <label>Servidor Base de Datos:</label>
-                        <input type="text" id="cfg-server" placeholder="Ej: HILO-000">
-                    </div>
-                    <div class="input-group">
-                        <label>Nombre BD:</label>
-                        <input type="text" id="cfg-dbname" placeholder="Ej: BAL">
-                    </div>
-                    <div class="input-group">
-                        <label>Usuario BD (Vacío = Windows Auth):</label>
-                        <input type="text" id="cfg-user">
-                    </div>
-                    <div class="input-group">
-                        <label>Contraseña BD:</label>
-                        <input type="password" id="cfg-pass">
-                    </div>
-                    <div class="input-group mt-1">
-                        <label>Secuencia Inicio Primer Camión:</label>
-                        <input type="number" id="cfg-camion-i" value="1">
-                    </div>
-                    <div class="input-group">
-                        <label>Capacidad Camión (Sets/Autos):</label>
-                        <input type="number" id="cfg-camion-c" value="24">
-                    </div>
-                    <div class="input-group mt-1">
-                        <label>Carpeta Archivos TXT SFTP:</label>
-                        <input type="text" id="folder-path" value="C:\SFTP\Toyota\">
-                    </div>
-                    
-                    <div style="background: rgba(255,255,255,0.02); padding: 1.5rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); margin-top:2rem;">
-                        <h3 style="margin-top: 0; color:var(--accent); font-size:1.1rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; margin-bottom: 1rem;">Opciones de Impresión de Línea (Lector E)</h3>
+            <div class="truck-grid" id="truck-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem;">
+                <!-- Rendered by JS -->
+            </div>
+        </main>
+
+        <!-- MAIN: CATÁLOGO BOM -->
+        <main id="catalog-view" class="dashboard hidden">
+            <header class="dashboard-header">
+                <h2>Gestión de Catálogo Maestro (BOM)</h2>
+                <p>Alta de productos y actualización masiva de recetas y componentes internos.</p>
+            </header>
+
+            <div class="config-grid">
+                <div class="config-col">
+                    <section class="glass-card config-panel">
+                        <h3>Alta Manual de Variante / Pieza</h3>
+                        <p class="subtitle mb-1">Vincula un Código Padre con un componente físico (Hijo).</p>
+                        
                         <div class="input-group">
-                            <label>Modo de Impresión Automática:</label>
-                            <select id="cfg-print-mode" style="width:100%; padding:0.8rem; background:rgba(0,0,0,0.5); color:white; border: 1px solid rgba(255,255,255,0.1); border-radius:4px;">
-                                <option value="OFF">Desactivado (Solo digital)</option>
-                                <option value="ZPL">Red Socket TCP (Cebras nativas por ZPL)</option>
-                                <option value="PDF">Generar PDF File (Para simular o lote local en servidor)</option>
+                            <label>Código Variante Padre:</label>
+                            <input type="text" id="cat-padre" placeholder="Ej: LD23">
+                        </div>
+                        <div class="input-group">
+                            <label>Línea Producción Principal:</label>
+                            <input type="text" id="cat-linea" placeholder="Ej: Seat, Door, Armrest">
+                        </div>
+                        <div class="input-group mt-1">
+                            <label>Cód. SD Interno (Hijo):</label>
+                            <input type="text" id="cat-hijo" placeholder="Ej: A3B">
+                        </div>
+                        <div class="input-group">
+                            <label>Descripción Técnica:</label>
+                            <input type="text" id="cat-desc" placeholder="Ej: ARMREST ASSY">
+                        </div>
+                        <div class="input-group">
+                            <label>Posición Mano (Opcional):</label>
+                            <input type="text" id="cat-mano" placeholder="Ej: FR RH">
+                        </div>
+                        <div class="input-group">
+                            <label>Código TASA (Opcional):</label>
+                            <input type="text" id="cat-tasa" placeholder="Ej: 74210-0K190">
+                        </div>
+                        
+                        <button class="btn btn-primary mt-1" onclick="guardarAltaManual()" id="btn-save-cat" style="width:100%">Registrar en BOM</button>
+                        <div id="cat-msg" class="mt-1"></div>
+                    </section>
+                </div>
+
+                <div class="config-col">
+                    <section class="glass-card config-panel highlight-panel">
+                        <h3 style="color:white !important;">Importación Masiva (CSV)</h3>
+                        <p class="subtitle mb-1" style="color:rgba(255,255,255,0.8);">Carga masiva de rutas y matrices a la BD.</p>
+                        
+                        <div class="import-zone" id="drop-zone" onclick="document.getElementById('file-uploader').click()" style="background:rgba(255,255,255,0.1) !important; color:white !important; border-color:rgba(255,255,255,0.3) !important;">
+                            <p id="drop-text" style="font-weight: 600; font-size: 1.1rem; color:white;">Haz clic para buscar tu archivo .CSV</p>
+                            <p style="font-size:0.8rem; margin-top:0.5rem; opacity:0.8; color:white;">Padre, Hijo, Codigo TASA, Descripcion, PosicionMano, Linea</p>
+                            <input type="file" id="file-uploader" accept=".csv" style="display:none;" onchange="manejarArchivo(this)">
+                        </div>
+                        
+                        <button class="btn btn-secondary mt-1" id="btn-upload-csv" onclick="subirCsvMasivo()" disabled style="width: 100%; color:var(--brand-primary) !important;">Subir y Procesar Masivamente</button>
+                        <div id="upload-msg" class="mt-1"></div>
+                    </section>
+                </div>
+            </div>
+        </main>
+
+        <!-- MAIN: EDITOR DE ETIQUETAS -->
+        <main id="editor-view" class="dashboard hidden">
+            <header class="dashboard-header">
+                <h2>Health Report Pending (ZPL Editor)</h2>
+                <p>Diseña el ticket de picking arrastrando y soltando los campos sobre tu papel físico.</p>
+            </header>
+
+            <div style="display: flex; gap: 2rem; margin-top:1rem;">
+                <div style="flex: 0 0 320px; display:flex; flex-direction:column; gap:1.5rem;">
+                    <div class="glass-card">
+                        <div class="input-group mb-1">
+                            <label>Lector de Origen:</label>
+                            <select id="editor-lector" onchange="cargarTemplateBase()">
+                                <option value="E">Lector E (Asientos/Paneles)</option>
+                                <option value="H">Lector H (Demanda)</option>
                             </select>
                         </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                            <div class="input-group">
-                                <label>IP Destino Línea 1 (Asientos):</label>
-                                <input type="text" id="cfg-ip-l1" placeholder="Ej: 192.168.1.91">
-                            </div>
-                            <div class="input-group">
-                                <label>IP Destino Línea 2 (Puertas):</label>
-                                <input type="text" id="cfg-ip-l2" placeholder="Ej: 192.168.1.92">
-                            </div>
+                        <div class="input-group">
+                            <label>Tamaño de Papel Físico:</label>
+                            <select id="editor-paper" onchange="cambiarPapel()">
+                                <option value="10x6">100x60 mm (Estándar Picking)</option>
+                                <option value="10x10">100x100 mm (Etiqueta Cuadrada)</option>
+                                <option value="A5">Formato A5 (148x210 mm)</option>
+                            </select>
                         </div>
                     </div>
 
-                    <button class="btn btn-secondary mt-1" onclick="guardarConfigGeneral()" id="btn-save-cfg" style="width: 100%; margin-top: 2rem;">Guardar Generales</button>
-                </section>
-            </div>
-
-            <div class="config-col">
-                <section class="glass-card config-panel">
-                    <h3>Ingreso Manual (Simulador TXT)</h3>
-                    <p class="subtitle mb-1">Forza la inserción de una secuencia en el sistema sin pasar por archivo.</p>
-                    <div class="input-group">
-                        <label>Lectora Variante Simulada:</label>
-                        <select id="sim-letra" style="width: 100%; border-color: var(--accent); padding: 5px; border-radius: 4px; background: rgba(0,0,0,0.5); color: white;">
-                            <option value="E">Lector E (Producible / A Buffer)</option>
-                            <option value="H">Lector H (Despachable / A Camión)</option>
-                            <option value="F">Lector F</option>
-                            <option value="A">Lector A</option>
-                            <option value="J">Lector J</option>
-                        </select>
+                    <div class="glass-card">
+                        <h4 style="margin-top:0;">Herramientas Gráficas</h4>
+                        <div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.5rem;">
+                            <button class="btn btn-secondary" onclick="crearElemento('static')">+ 📝 Texto Estático</button>
+                            <button class="btn btn-secondary" onclick="crearElemento('hline')">+ ➖ Línea Horizontal</button>
+                            <button class="btn btn-secondary" onclick="crearElemento('vline')">+ ⏐ Línea Vertical</button>
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label>Código Padre Completo:</label>
-                        <input type="text" id="sim-padre" placeholder="Ej: LD23">
+
+                    <div class="glass-card" id="editor-props">
+                        <h4 style="margin-top:0; color:var(--text-primary);">Propiedades del Elemento</h4>
+                        <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:1rem;" id="prop-hint">Ház clic en un campo del lienzo para editarlo.</p>
+                        
+                        <div id="prop-controls" style="display:none;">
+                            <div class="input-group mb-1" id="ctrl-text" style="display:none;">
+                                <label>Texto a Mostrar:</label>
+                                <input type="text" id="editor-text-val" oninput="actualizarTamanoBase()">
+                            </div>
+                            
+                            <div class="input-group mb-1">
+                                <label id="lbl-editor-size">Multiplicador de Tamaño:</label>
+                                <input type="range" id="editor-size" min="0.5" max="10" step="0.5" value="1" oninput="actualizarTamanoBase()">
+                                <span id="editor-size-val" style="font-family:var(--font-mono); font-size:0.8rem; display:block; text-align:right;">1.0x</span>
+                            </div>
+                            
+                            <div class="input-group mb-1" id="ctrl-length" style="display:none;">
+                                <label>Largo Total (%):</label>
+                                <input type="range" id="editor-length" min="2" max="100" step="1" value="50" oninput="actualizarTamanoBase()">
+                                <span id="editor-length-val" style="font-family:var(--font-mono); font-size:0.8rem; display:block; text-align:right;">50%</span>
+                            </div>
+                            
+                            <button class="btn" style="background:#EF4444; width:100%; color:white; padding:1rem; margin-top:1rem; border-radius:12px; font-weight:700;" onclick="eliminarElementoActual()" id="btn-del-el">🗑 Borrar Elemento</button>
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label>Secuencia:</label>
-                        <input type="text" id="sim-sec" placeholder="Ej: 001">
-                    </div>
-                    <div class="input-group">
-                        <label>Nro. Chasis:</label>
-                        <input type="text" id="sim-chasis" placeholder="Ej: 8K11223344">
-                    </div>
-                    <button class="btn btn-primary mt-1" onclick="ejecutarSincronizacionManual()" id="btn-sim-scan">Simular Recepción Transaccional</button>
-                    <div id="sim-msg" class="mt-1"></div>
-                </section>
-            </div>
-        </div>
-    </main>
-
-    <!-- MAIN: MAPEO TXT -->
-    <main id="mapping-view" class="dashboard hidden">
-        <header class="dashboard-header">
-            <h2>Mapeo Posicional TXT</h2>
-            <p>Define los offsets lógicos (inicio y ancho) para cada lectora en planta.</p>
-        </header>
-
-        <section class="glass-card config-panel" style="max-width: 800px; margin: 0 auto;">
-            <div class="tabs-letras" id="tabs-letras-map">
-                <button class="btn-tab active" onclick="cargarMapeoTXT('E', this)">Letra E</button>
-                <button class="btn-tab" onclick="cargarMapeoTXT('H', this)">Letra H</button>
-                <button class="btn-tab" onclick="cargarMapeoTXT('F', this)">Letra F</button>
-                <button class="btn-tab" onclick="cargarMapeoTXT('A', this)">Letra A</button>
-                <button class="btn-tab" onclick="cargarMapeoTXT('J', this)">Letra J</button>
-            </div>
-            <input type="hidden" id="map-current-letter-txt" value="E">
-            
-            <div class="mapping-table-container mt-1">
-                <table class="mapping-table">
-                    <thead>
-                        <tr>
-                            <th>Campo Extraído</th>
-                            <th>Posición Inicial</th>
-                            <th>Ancho de Cadena</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Nro. de Secuencia</td>
-                            <td><input type="number" id="map-sec-i"></td>
-                            <td><input type="number" id="map-sec-a"></td>
-                        </tr>
-                        <tr>
-                            <td>Sufijo Auto</td>
-                            <td><input type="number" id="map-suf-i"></td>
-                            <td><input type="number" id="map-suf-a"></td>
-                        </tr>
-                        <tr>
-                            <td>Color Exterior</td>
-                            <td><input type="number" id="map-col-i"></td>
-                            <td><input type="number" id="map-col-a"></td>
-                        </tr>
-                        <tr>
-                            <td>Modelo Base</td>
-                            <td><input type="number" id="map-mod-i"></td>
-                            <td><input type="number" id="map-mod-a"></td>
-                        </tr>
-                        <tr>
-                            <td>Número de Chasis</td>
-                            <td><input type="number" id="map-cha-i"></td>
-                            <td><input type="number" id="map-cha-a"></td>
-                        </tr>
-                        <tr>
-                            <td>Fecha Cadena</td>
-                            <td><input type="number" id="map-fec-i"></td>
-                            <td><input type="number" id="map-fec-a"></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <button class="btn btn-secondary mt-1" onclick="guardarMapeoTXT()" id="btn-save-map-txt">Guardar Offsets para esta Letra</button>
-        </section>
-    </main>
-
-    <!-- MAIN: CONFIG LECTORES -->
-    <main id="readers-view" class="dashboard hidden">
-        <header class="dashboard-header">
-            <h2>Configuración y Reglas de Lectores</h2>
-            <p>Define límites de topes de secuencia y activa reglas de integridad individuales.</p>
-        </header>
-
-        <section class="glass-card config-panel" style="max-width: 800px; margin: 0 auto;">
-            <div class="tabs-letras" id="tabs-letras-rules">
-                <button class="btn-tab active" onclick="cargarReglasLector('E', this)">Letra E</button>
-                <button class="btn-tab" onclick="cargarReglasLector('H', this)">Letra H</button>
-                <button class="btn-tab" onclick="cargarReglasLector('F', this)">Letra F</button>
-                <button class="btn-tab" onclick="cargarReglasLector('A', this)">Letra A</button>
-                <button class="btn-tab" onclick="cargarReglasLector('J', this)">Letra J</button>
-            </div>
-            <input type="hidden" id="map-current-letter-rules" value="E">
-            
-            <div class="mapping-table-container mt-1">
-                <table class="mapping-table">
-                    <thead>
-                        <tr>
-                            <th colspan="2">Reglas Duras y Exclusiones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td style="width: 50%;"><strong>Tope Secuencia (Reseteo a 1)</strong><br><small style="opacity:0.7">El límite en el que la secuencia empieza de 0.</small></td>
-                            <td><input type="number" id="rule-sec-t" placeholder="Ej: 9999 o 999" style="width: 100%; border-color: var(--accent);"></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Validar Saltos y Duplicados</strong><br><small style="opacity:0.7">Detiene la inserción si detecta error numérico.</small></td>
-                            <td><label style="cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.5rem;"><input type="checkbox" id="rule-sec-strict" style="width:18px; height:18px;" checked> Habilitar</label></td>
-                        </tr>
-                        <tr>
-                            <td><strong>Códigos Padres Ignorados</strong><br><small style="opacity:0.7">Separados por comas para suprimir de este lector.</small></td>
-                            <td><input type="text" id="rule-ignored" placeholder="Ej: C323, LD23" style="width: 100%; border-color: var(--accent);"></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <button class="btn btn-secondary mt-1" onclick="guardarReglasLector()" id="btn-save-rules">Guardar Reglas de este Lector</button>
-        </section>
-    </main>
-
-    <!-- MAIN: DESPACHO TRUCKS -->
-    <main id="despacho-view" class="dashboard hidden">
-        <header class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-            <div>
-                <h2>Gestión de Camiones de Despacho</h2>
-                <p>Monitoreo en vivo del armado y carga en rampa según la secuencia sincronizada.</p>
-            </div>
-            <div style="background: rgba(255,255,255,0.05); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); display: flex; gap: 1rem; align-items: flex-end;">
-                <div class="input-group" style="margin: 0;">
-                    <label style="font-size: 0.8rem; margin-bottom: 3px;">Secuencia Inicio Camión #1</label>
-                    <input type="number" id="dsp-cfg-inicio" style="max-width: 90px; padding: 6px; text-align: center;">
-                </div>
-                <div class="input-group" style="margin: 0;">
-                    <label style="font-size: 0.8rem; margin-bottom: 3px;">Capacidad (Sets)</label>
-                    <input type="number" id="dsp-cfg-cap" style="max-width: 90px; padding: 6px; text-align: center;">
-                </div>
-                <button class="btn btn-primary" onclick="actualizarConfigDespacho()" id="btn-save-dsp" style="padding: 7px 15px;">Aplicar Lote</button>
-            </div>
-        </header>
-
-        <div class="truck-grid" id="truck-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem;">
-            <!-- Rendered by JS -->
-        </div>
-    </main>
-
-    <!-- MAIN: HISTORIAL -->
-    <main id="historial-view" class="dashboard hidden">
-        <header class="dashboard-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 1rem;">
-            <div>
-                <h2>Historial de Secuencias</h2>
-                <p>Monitor de trazabilidad histórica de los archivos físicos ingresados desde TASA.</p>
-            </div>
-            <div style="background: rgba(255,255,255,0.05); padding: 10px 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); display: flex; gap: 1rem; align-items: center;">
-                <select id="flt-lector" onchange="renderHistorial()" style="padding: 8px; border-radius: 5px; background: rgba(0,0,0,0.5); color: white; border: 1px solid var(--accent); cursor: pointer;">
-                    <option value="ALL">🔍 Todos los Lectores</option>
-                    <option value="E">Lector E (Seat)</option>
-                    <option value="H">Lector H (Door)</option>
-                    <option value="A">Lector A</option>
-                    <option value="F">Lector F</option>
-                    <option value="J">Lector J</option>
-                </select>
-                <button class="btn btn-secondary" onclick="renderHistorial()" style="padding: 7px 15px;">🔄 Refresh</button>
-            </div>
-        </header>
-
-        <section class="glass-card" style="padding: 0; overflow: hidden;">
-            <div style="max-height: 60vh; overflow-y: auto;">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Fecha de Lectura</th>
-                            <th>Lector</th>
-                            <th>Secuencia</th>
-                            <th>N° Chasis</th>
-                            <th>Cód. Padre (Suffix)</th>
-                            <th>Subarchivo TXT</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historial-body">
-                        <!-- Rendered by JS -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    </main>
-
-    <!-- MAIN: BUFFER -->
-    <main id="buffer-view" class="dashboard hidden">
-        <header class="dashboard-header">
-            <h2>Inventario Pulmón / Buffer</h2>
-            <p>Escaneo físico de piezas desde Línea hacia Buffer, y de Buffer hacia Rampa de Camiones.</p>
-        </header>
-
-        <div style="display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 1.5rem;">
-            <!-- Column 1: Salida de Línea E (Pendientes) -->
-            <section class="glass-card" style="padding: 1rem;">
-                <h3 style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; margin-bottom: 1rem;">1. Salida de Línea (Ingreso a Buffer)</h3>
-                <div style="max-height: 50vh; overflow-y: auto;">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Línea</th>
-                                <th>Seq.</th>
-                                <th>Modelo Físico</th>
-                                <th>Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody id="buf-pendientes-body"></tbody>
-                    </table>
-                </div>
-            </section>
-            
-            <!-- Column 2: Buffer Físico E -->
-            <section class="glass-card" style="padding: 1rem; border: 1px solid rgba(33, 150, 243, 0.4);">
-                <h3 style="border-bottom: 1px solid rgba(33, 150, 243, 0.4); padding-bottom: 0.5rem; margin-bottom: 1rem; color:#2196F3;">2. Buffer Físico (Stock E Disponible)</h3>
-                <div style="margin-bottom: 1rem; display: flex; gap: 0.5rem; align-items: center;">
-                    <label>Asignar al Camión:</label>
-                    <select id="buf-sel-camion" onchange="renderBuffer()" style="padding: 5px; flex: 1; border-radius: 4px; border: 1px solid #2196F3; background:rgba(0,0,0,0.5); color:white; cursor:pointer;">
-                    </select>
-                </div>
-                <div style="max-height: 45vh; overflow-y: auto;">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Buffer Hora</th>
-                                <th>Seq. Origen</th>
-                                <th>Modelo E</th>
-                                <th>Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody id="buf-real-body"></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- Column 3: Manifiesto Camion H -->
-            <section class="glass-card" style="padding: 1rem; border: 1px solid rgba(76, 175, 80, 0.4);">
-                <h3 style="border-bottom: 1px solid rgba(76, 175, 80, 0.4); padding-bottom: 0.5rem; margin-bottom: 1rem; color:#4CAF50;">3. Manifiesto Camión (Demanda H)</h3>
-                <p style="font-size:0.8rem; margin-bottom:1rem; opacity:0.8;">El verde valida 1 Asiento y 1 Panel en Buffer (Col. 2).</p>
-                <div style="max-height: 50vh; overflow-y: auto;">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>SEQ [H]</th>
-                                <th>Modelo [H]</th>
-                                <th>Estado Real</th>
-                            </tr>
-                        </thead>
-                        <tbody id="buf-manifest-body"></tbody>
-                    </table>
-                </div>
-            </section>
-        </div>
-    </main>
-
-    <!-- MAIN: EDITOR DE ETIQUETAS -->
-    <main id="editor-view" class="dashboard hidden">
-        <header class="dashboard-header">
-            <h2>Módulo Creador Visual de Etiquetas JIT</h2>
-            <p>Diseña el ticket de picking arrastrando y soltando los campos sobre tu papel físico.</p>
-        </header>
-
-        <div style="display: flex; gap: 2rem; margin-top:1rem;">
-            <!-- Controles Izquierdos -->
-            <div style="flex: 0 0 320px; display:flex; flex-direction:column; gap:1.5rem;">
-                <div class="glass-card">
-                    <div class="form-group mb-1">
-                        <label>Lector de Origen:</label>
-                        <select id="editor-lector" onchange="cargarTemplateBase()" style="width:100%; padding:8px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.2); border-radius:4px;">
-                            <option value="E">Lector E (Asientos/Paneles)</option>
-                            <option value="H">Lector H (Demanda)</option>
-                            <option value="F">Lector F</option>
-                            <option value="A">Lector A</option>
-                            <option value="J">Lector J</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Tamaño de Papel Físico:</label>
-                        <select id="editor-paper" onchange="cambiarPapel()" style="width:100%; padding:8px; background:rgba(0,0,0,0.5); color:white; border:1px solid rgba(255,255,255,0.2); border-radius:4px;">
-                            <option value="10x6">100x60 mm (Estándar Picking)</option>
-                            <option value="10x10">100x100 mm (Etiqueta Cuadrada)</option>
-                            <option value="A5">Formato A5 (148x210 mm)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="glass-card">
-                    <h4 style="margin-top:0; color:var(--accent);">Herramientas Gráficas</h4>
-                    <div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.5rem;">
-                        <button class="btn btn-secondary" onclick="crearElemento('static')">+ 📝 Texto Estático</button>
-                        <button class="btn btn-secondary" onclick="crearElemento('hline')">+ ➖ Línea Horizontal</button>
-                        <button class="btn btn-secondary" onclick="crearElemento('vline')">+ ⏐ Línea Vertical</button>
-                    </div>
-                </div>
-
-                <div class="glass-card" id="editor-props">
-                    <h4 style="margin-top:0; color:var(--accent);">Propiedades del Elemento</h4>
-                    <p style="font-size:0.8rem; opacity:0.7; margin-bottom:1rem;" id="prop-hint">Ház clic en un campo del lienzo para editarlo.</p>
                     
-                    <div id="prop-controls" style="display:none;">
-                        <div class="form-group mb-1" id="ctrl-text" style="display:none;">
-                            <label>Texto a Mostrar:</label>
-                            <input type="text" id="editor-text-val" oninput="actualizarTamanoBase()">
-                        </div>
-                        
-                        <div class="form-group mb-1">
-                            <label id="lbl-editor-size">Multiplicador de Tamaño:</label>
-                            <input type="range" id="editor-size" min="0.5" max="10" step="0.5" value="1" oninput="actualizarTamanoBase()">
-                            <span id="editor-size-val" style="font-family:var(--font-mono); font-size:0.8rem; display:block; text-align:right;">1.0x</span>
-                        </div>
-                        
-                        <div class="form-group mb-1" id="ctrl-length" style="display:none;">
-                            <label>Largo Total (%):</label>
-                            <input type="range" id="editor-length" min="2" max="100" step="1" value="50" oninput="actualizarTamanoBase()">
-                            <span id="editor-length-val" style="font-family:var(--font-mono); font-size:0.8rem; display:block; text-align:right;">50%</span>
-                        </div>
-                        
-                        <button class="btn" style="background:rgba(255,0,0,0.5); width:100%; color:white; padding:0.5rem; margin-top:0.5rem;" onclick="eliminarElementoActual()" id="btn-del-el">🗑 Borrar Elemento</button>
+                    <button class="btn btn-primary" onclick="guardarTemplate()" id="btn-save-tpl" style="padding:1rem;">💾 Guardar Diseño PDF/ZPL</button>
+                    <div id="tpl-msg" class="mt-1"></div>
+                </div>
+
+                <div style="flex: 1; display:flex; justify-content:center; align-items:flex-start; background:var(--bg-main); border-radius:16px; padding:2rem; overflow:auto; border: 1px solid var(--border-soft);">
+                    <div id="print-canvas" style="background:white; color:black; position:relative; box-shadow:var(--shadow-soft); transform-origin: top center; width: 100mm; height: 60mm; touch-action: none; border-radius:8px;">
+                        <!-- Renderizado dinámicamente por JS -->
                     </div>
                 </div>
-                
-                <button class="btn btn-primary" onclick="guardarTemplate()" id="btn-save-tpl" style="padding:1rem;">💾 Guardar Diseño PDF/ZPL</button>
-                <div id="tpl-msg" class="mt-1"></div>
+            </div>
+        </main>
+
+        <!-- MAIN: AJUSTES (Settings consolidados) -->
+        <main id="settings-view" class="dashboard hidden">
+            <header class="dashboard-header" style="margin-bottom: 2rem;">
+                <h2>Medical Information & Settings</h2>
+                <p>Configuración global, paramétrica y reglas físicas.</p>
+            </header>
+
+            <div class="tabs-letras" style="margin-bottom: 2rem; border-bottom: 2px solid var(--border-soft); padding-bottom: 0; display:flex; gap:2rem;">
+                <button class="btn-tab active" onclick="switchSubTab(event, 'sub-config')" style="border-radius:0; border-bottom:4px solid var(--brand-primary); padding-bottom:1rem; color:var(--text-primary);">Configuración Global</button>
+                <button class="btn-tab" onclick="switchSubTab(event, 'sub-mapping')" style="border-radius:0; border-bottom:4px solid transparent; padding-bottom:1rem; background:transparent;">Mapeo Interfaces (TXT)</button>
+                <button class="btn-tab" onclick="switchSubTab(event, 'sub-readers')" style="border-radius:0; border-bottom:4px solid transparent; padding-bottom:1rem; background:transparent;">Reglas Lectores</button>
             </div>
 
-            <!-- Canvas Central -->
-            <div style="flex: 1; display:flex; justify-content:center; align-items:flex-start; background:rgba(0,0,0,0.3); border-radius:8px; padding:2rem; overflow:auto;">
-                <div id="print-canvas" style="background:white; color:black; position:relative; box-shadow:0 10px 30px rgba(0,0,0,0.5); transform-origin: top center; width: 100mm; height: 60mm; touch-action: none;">
-                    <!-- Renderizado dinámicamente por JS -->
+            <!-- Ajustes: CONFIG -->
+            <div id="sub-config" class="sub-view">
+                <div class="config-grid">
+                    <div class="config-col">
+                        <section class="glass-card config-panel">
+                            <h3>Conexión y Directorios</h3>
+                            <div class="input-group"><label>Servidor BD:</label><input type="text" id="cfg-server"></div>
+                            <div class="input-group"><label>Nombre BD:</label><input type="text" id="cfg-dbname"></div>
+                            <div class="input-group"><label>Usuario BD:</label><input type="text" id="cfg-user"></div>
+                            <div class="input-group"><label>Contraseña BD:</label><input type="password" id="cfg-pass"></div>
+                            <div class="input-group mt-1"><label>Secuencia Inicio Camión:</label><input type="number" id="cfg-camion-i" value="1"></div>
+                            <div class="input-group"><label>Capacidad Camión:</label><input type="number" id="cfg-camion-c" value="24"></div>
+                            <div class="input-group mt-1"><label>Carpeta Archivos TXT SFTP:</label><input type="text" id="folder-path" value="C:\SFTP\Toyota\"></div>
+                            
+                            <div style="background: var(--bg-main); padding: 1.5rem; border-radius: 12px; margin-top:2rem;">
+                                <h4>Impresión de Línea Automática</h4>
+                                <div class="input-group">
+                                    <label>Modo de Impresión:</label>
+                                    <select id="cfg-print-mode">
+                                        <option value="OFF">Desactivado (Solo digital)</option>
+                                        <option value="ZPL">Red Socket TCP (Cebras nativas por ZPL)</option>
+                                        <option value="PDF">Generar PDF File</option>
+                                    </select>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                    <div class="input-group"><label>IP Línea 1 (Asientos):</label><input type="text" id="cfg-ip-l1" placeholder="192.168.1.91"></div>
+                                    <div class="input-group"><label>IP Línea 2 (Puertas):</label><input type="text" id="cfg-ip-l2" placeholder="192.168.1.92"></div>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary mt-1" onclick="guardarConfigGeneral()" id="btn-save-cfg" style="width: 100%; margin-top: 2rem;">Guardar Generales</button>
+                        </section>
+                    </div>
+
+                    <div class="config-col">
+                        <section class="glass-card config-panel highlight-panel">
+                            <h3 style="color:white !important;">Ingreso Manual (Simulador TXT)</h3>
+                            <p class="subtitle mb-1" style="color:rgba(255,255,255,0.8);">Forzar transacción y simular piezas.</p>
+                            <div class="input-group"><label style="color:white !important;">Lectora Variante Simulada:</label>
+                                <select id="sim-letra" style="background:white !important; color:var(--brand-primary) !important;">
+                                    <option value="E">Lector E (Producible / A Buffer)</option>
+                                    <option value="H">Lector H (Despachable / A Camión)</option>
+                                </select>
+                            </div>
+                            <div class="input-group"><label style="color:white !important;">Código Padre:</label><input type="text" id="sim-padre" placeholder="Ej: LD23"></div>
+                            <div class="input-group"><label style="color:white !important;">Secuencia:</label><input type="text" id="sim-sec" placeholder="Ej: 001"></div>
+                            <div class="input-group"><label style="color:white !important;">Nro. Chasis:</label><input type="text" id="sim-chasis" placeholder="Ej: 8K11223344"></div>
+                            <button class="btn btn-secondary mt-1" onclick="ejecutarSincronizacionManual()" id="btn-sim-scan" style="width:100%">Simular Recepción Transaccional</button>
+                            <div id="sim-msg" class="mt-1"></div>
+                        </section>
+                    </div>
                 </div>
             </div>
-        </div>
-    </main>
 
+            <!-- Ajustes: MAPEO -->
+            <div id="sub-mapping" class="sub-view hidden">
+                <section class="glass-card config-panel" style="max-width: 800px; margin: 0 auto;">
+                    <h3>Mapeo Posicional TXT</h3>
+                    <p class="subtitle mb-1">Define los offsets (inicio y ancho) para cada lectora en planta.</p>
+                    <div class="tabs-letras" id="tabs-letras-map" style="margin-bottom: 2rem;">
+                        <button class="btn-tab active" onclick="cargarMapeoTXT('E', this)" style="border-radius:24px; border:none;">Letra E</button>
+                        <button class="btn-tab" onclick="cargarMapeoTXT('H', this)" style="border-radius:24px; border:none;">Letra H</button>
+                        <button class="btn-tab" onclick="cargarMapeoTXT('A', this)" style="border-radius:24px; border:none;">Letra A</button>
+                    </div>
+                    <input type="hidden" id="map-current-letter-txt" value="E">
+                    
+                    <div class="mapping-table-container">
+                        <table class="mapping-table">
+                            <thead><tr><th>Campo Extraído</th><th>Posición Inicial</th><th>Ancho de Cadena</th></tr></thead>
+                            <tbody>
+                                <tr><td>Nro. de Secuencia</td><td><input type="number" id="map-sec-i"></td><td><input type="number" id="map-sec-a"></td></tr>
+                                <tr><td>Sufijo Auto</td><td><input type="number" id="map-suf-i"></td><td><input type="number" id="map-suf-a"></td></tr>
+                                <tr><td>Color Exterior</td><td><input type="number" id="map-col-i"></td><td><input type="number" id="map-col-a"></td></tr>
+                                <tr><td>Modelo Base</td><td><input type="number" id="map-mod-i"></td><td><input type="number" id="map-mod-a"></td></tr>
+                                <tr><td>Número de Chasis</td><td><input type="number" id="map-cha-i"></td><td><input type="number" id="map-cha-a"></td></tr>
+                                <tr><td>Fecha Cadena</td><td><input type="number" id="map-fec-i"></td><td><input type="number" id="map-fec-a"></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-primary mt-1" onclick="guardarMapeoTXT()" id="btn-save-map-txt">Guardar Offsets</button>
+                </section>
+            </div>
+
+            <!-- Ajustes: READERS -->
+            <div id="sub-readers" class="sub-view hidden">
+                <section class="glass-card config-panel" style="max-width: 800px; margin: 0 auto;">
+                    <h3>Reglas Físicas de Lectores</h3>
+                    <p class="subtitle mb-1">Límites, reseteos de contadores y reglas anti-fraude.</p>
+                    <div class="tabs-letras" id="tabs-letras-rules" style="margin-bottom: 2rem;">
+                        <button class="btn-tab active" onclick="cargarReglasLector('E', this)" style="border-radius:24px; border:none;">Letra E</button>
+                        <button class="btn-tab" onclick="cargarReglasLector('H', this)" style="border-radius:24px; border:none;">Letra H</button>
+                    </div>
+                    <input type="hidden" id="map-current-letter-rules" value="E">
+                    
+                    <div class="mapping-table-container">
+                        <table class="mapping-table">
+                            <thead><tr><th colspan="2">Reglas Duras y Exclusiones</th></tr></thead>
+                            <tbody>
+                                <tr>
+                                    <td style="width: 50%;"><strong>Tope Secuencia (Reseteo a 1)</strong><br><small style="color:var(--text-secondary)">El límite en el que la secuencia empieza de 0.</small></td>
+                                    <td><input type="number" id="rule-sec-t" placeholder="Ej: 9999 o 999"></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Validar Saltos y Duplicados</strong><br><small style="color:var(--text-secondary)">Detiene la inserción si detecta error numérico.</small></td>
+                                    <td><label style="cursor:pointer; display:flex; align-items:center; justify-content:flex-start; gap:0.5rem;"><input type="checkbox" id="rule-sec-strict" checked> Habilitar</label></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Códigos Padres Ignorados</strong><br><small style="color:var(--text-secondary)">Separados por comas para suprimir de este lector.</small></td>
+                                    <td><input type="text" id="rule-ignored" placeholder="Ej: C323, LD23"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-primary mt-1" onclick="guardarReglasLector()" id="btn-save-rules">Guardar Reglas de este Lector</button>
+                </section>
+            </div>
+        </main>
+
+    </div><!-- APP BODY END -->
+
+    <script>
+        function switchSubTab(e, tabId) {
+            // Oculta todas las sub-vistas
+            document.querySelectorAll('.sub-view').forEach(el => el.classList.add('hidden'));
+            
+            // Resetea todos los botones del navbar de settings (los que tienen border-bottom dinámico)
+            const parentContainer = e.target.parentElement;
+            parentContainer.querySelectorAll('.btn-tab').forEach(btn => {
+                btn.classList.remove('active');
+                if(btn.style.borderBottomWidth) {
+                    btn.style.borderBottomColor = 'transparent';
+                    btn.style.color = 'var(--text-secondary)';
+                }
+            });
+            
+            // Activa el clickeado
+            document.getElementById(tabId).classList.remove('hidden');
+            e.target.classList.add('active');
+            
+            // Aplica el estilo activo si es el nuevo estilo top border-bottom
+            if(e.target.style.borderBottomWidth) {
+                e.target.style.borderBottomColor = 'var(--brand-primary)';
+                e.target.style.color = 'var(--text-primary)';
+            }
+        }
+    </script>
     <script src="/static/script.js"></script>
 </body>
 </html>
